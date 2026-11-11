@@ -44,7 +44,8 @@ async function area(lat, lng) {
   );
   const a = (await r.json()).address || {};
   let city = a.city || a.state || a.county || a.province || '';
-  let district = a.suburb || a.city_district || a.district || a.borough || a.town || a.village || a.neighbourhood || '';
+  const ward = Object.values(a).find(v => /[區区]$/.test(v));
+  let district = ward || a.suburb || a.city_district || a.district || a.borough || a.town || a.village || a.neighbourhood || '';
   // 日本：city 其實是「區」(港区)，上一層才是都道府縣
   if (a.state && a.city && /[区區]$/.test(a.city) && a.state !== a.city) { district = a.city; city = a.state; }
   if (!district && a.county && a.county !== city) district = a.county;
