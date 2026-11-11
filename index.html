@@ -25,11 +25,12 @@ body{background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,"SF Pro 
 .pill{display:flex;align-items:center;background:var(--bg);border-radius:999px;box-shadow:var(--shadow);padding:4px 4px 4px 18px}
 .pill input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--ink);font:inherit;padding:9px 0}
 .pill button{border:0;border-radius:999px;background:var(--ink);color:var(--bg);font:inherit;font-weight:600;padding:9px 18px}
-#say{display:inline-block;margin-top:8px;max-width:100%;background:var(--bg);color:var(--ink);border-radius:999px;box-shadow:var(--shadow);padding:6px 14px;font-size:13px}
+.chip{margin-top:8px;border:0;background:var(--bg);color:var(--ink);box-shadow:var(--shadow);border-radius:999px;padding:6px 14px;font:inherit;font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#say{display:inline-block;margin:8px 0 0 8px;max-width:100%;background:var(--bg);color:var(--ink);border-radius:999px;box-shadow:var(--shadow);padding:6px 14px;font-size:13px;vertical-align:top}
 #say:empty{display:none}
 #say.err{color:var(--err)}
 .sheet{position:absolute;z-index:1000;left:0;right:0;bottom:0;height:var(--h);background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14);display:flex;flex-direction:column;transition:height .25s ease}
-.sheet.drag,.sheet.drag~*{transition:none}
+.sheet.drag{transition:none}
 .grab{padding:10px 0 8px;touch-action:none;cursor:grab}
 .grab i{display:block;width:36px;height:4px;border-radius:2px;background:var(--mut);opacity:.45;margin:0 auto}
 .fab{position:absolute;right:12px;top:-56px;width:44px;height:44px;border:0;border-radius:50%;background:var(--bg);color:var(--ink);box-shadow:var(--shadow);font-size:20px;line-height:1}
@@ -51,19 +52,44 @@ h3{font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 0}
 .sec small{color:var(--mut);font-weight:400;margin-left:6px;font-size:13px}
 .empty{padding:28px 0;text-align:center;color:var(--mut);font-size:14px}
 .note{padding:14px 0 0;color:var(--mut);font-size:13px;text-align:center}
+.nt{display:block;font-size:13px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pin{width:20px;height:20px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);transition:transform .15s}
 .pin.sel{transform:scale(1.35);background:#e5484d}
 .leaflet-popup-content-wrapper{border-radius:14px;background:var(--bg);color:var(--ink);box-shadow:var(--shadow)}
 .leaflet-popup-tip{background:var(--bg)}
 .leaflet-popup-content{margin:12px 16px;font-size:14px;line-height:1.5}
 .leaflet-popup-content a{color:var(--acc);font-weight:600;text-decoration:none}
+.pbtn{border:0;border-radius:999px;padding:8px 18px;font:inherit;font-weight:600;background:var(--ink);color:var(--bg)}
+.pbtn.ghost{background:var(--chip);color:var(--ink)}
+.pbtn.wide{width:100%;margin-top:10px}
+.clip{display:none;margin-top:8px;background:var(--bg);border-radius:16px;box-shadow:var(--shadow);padding:12px 14px}
+.clip.show{display:block}
+.clip .u{color:var(--mut);font-size:12px;word-break:break-all;max-height:2.9em;overflow:hidden;margin:2px 0 10px}
+.acts{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.modal{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.4);display:none;align-items:flex-end}
+.modal.show{display:flex}
+.modal .card{width:100%;max-height:88vh;overflow:auto;background:var(--bg);border-radius:20px 20px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+.modal h2{margin:0 0 12px;font-size:17px}
+.modal label{display:block;font-size:13px;color:var(--mut);margin-bottom:10px}
+.modal input,.modal textarea{display:block;width:100%;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;padding:10px;resize:none}
+.modal .two{display:flex;gap:10px}
+.modal .two label{flex:1}
+.inv{display:flex;gap:8px;margin-top:10px;align-items:center}
+.inv input{flex:1;margin-top:0}
+.login{position:fixed;inset:0;z-index:3000;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+.login.show{display:flex}
+.login h1{font-size:26px;margin:0 0 8px}
+.login p{color:var(--mut);margin:0 0 24px;max-width:300px}
+.login .pbtn{padding:12px 24px;font-size:16px}
+#lgMsg{color:var(--err);font-size:13px;margin-top:14px;max-width:300px}
 </style>
 </head>
 <body>
 <div id="map"></div>
 <div class="top">
   <div class="pill"><input id="url" placeholder="貼上 Google Map 連結" inputmode="url" autocomplete="off"><button id="go">加入</button></div>
-  <div id="say"></div>
+  <button class="chip" id="chip" data-a="openList">清單</button><div id="say"></div>
+  <div class="clip" id="clip"><div>剪貼簿裡有 Google Map 連結，要加入嗎？</div><div class="u" id="clipUrl"></div><div class="acts"><button class="pbtn ghost" id="clipNo">略過</button><button class="pbtn" id="clipYes">加入</button></div></div>
 </div>
 <div class="sheet" id="sheet">
   <button class="fab" id="loc" aria-label="我的位置">◎</button>
@@ -71,29 +97,55 @@ h3{font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 0}
   <div class="seg" id="seg"></div>
   <div class="body" id="body"></div>
 </div>
+<div class="modal" id="modal"><div class="card">
+  <h2>編輯地點</h2>
+  <label>名稱<input id="e_name"></label>
+  <label>備註<textarea id="e_note" rows="3" placeholder="例如：牛排店，適合約會"></textarea></label>
+  <div class="two"><label>城市<input id="e_city"></label><label>區<input id="e_district"></label></div>
+  <div class="acts"><button class="pbtn ghost" id="e_cancel">取消</button><button class="pbtn" id="e_save">儲存</button></div>
+</div></div>
+<div class="modal" id="lm"></div>
+<div class="login show" id="login">
+  <h1>我的地點</h1>
+  <p id="lgWait">載入中…</p>
+  <p id="lgText" style="display:none">登入後，清單會同步到你所有的裝置，也可以邀請別人一起使用。</p>
+  <button class="pbtn" id="lgBtn" style="display:none">使用 Google 登入</button>
+  <div id="lgMsg"></div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,getFirestore,collection,doc,addDoc,updateDoc,deleteDoc,getDocs,onSnapshot,query,where,arrayUnion,arrayRemove,writeBatch} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+var cfg={apiKey:"AIzaSyCvho09xqAd5rjEykdKWfQV6NXzAC_dsCg",authDomain:"my-places-f6be1.firebaseapp.com",projectId:"my-places-f6be1",storageBucket:"my-places-f6be1.firebasestorage.app",messagingSenderId:"1098913252917",appId:"1:1098913252917:web:d736cef21b0dbde541137c"};
+var app=initializeApp(cfg),auth=getAuth(app),db;
+try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){db=getFirestore(app)}
+
 var $=function(s){return document.querySelector(s)};
-var places=[],me=null,lastMe=null,tab='near',sel=null,markers={},fitted=false,first=true,idx=0,sayT=0;
+var user=null,lists=[],curList=null,places=[],me=null,lastMe=null,tab='near',sel=null,markers={},fitted=false,first=true,idx=0,sayT=0;
+var unL=null,unP=null,making=false,pending=null,focusNext=null,importAsked=false,readyDone=false,authReady=false;
 var NEAR=20000,FAR=50000;
-try{places=JSON.parse(localStorage.getItem('places2')||'[]')}catch(e){}
-function save(){try{localStorage.setItem('places2',JSON.stringify(places))}catch(e){}}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function gm(p){return p.url||('https://www.google.com/maps/search/?api=1&query='+p.lat+','+p.lng)}
 function dist(a,b){var R=6371000,r=Math.PI/180,x=Math.sin((b.lat-a.lat)*r/2),y=Math.sin((b.lng-a.lng)*r/2);
  return 2*R*Math.asin(Math.sqrt(x*x+Math.cos(a.lat*r)*Math.cos(b.lat*r)*y*y))}
 function fmt(m){return m<1000?Math.round(m)+' 公尺':(m/1000).toFixed(m<10000?1:0)+' 公里'}
-function say(t,err){var e=$('#say');e.textContent=t;e.className=err?'err':'';clearTimeout(sayT);sayT=setTimeout(function(){e.textContent=''},err?7000:4000)}
+function say(t,err){var e=$('#say');e.textContent=t;e.className=err?'err':'';clearTimeout(sayT);sayT=setTimeout(function(){e.textContent=''},err?8000:4000)}
+function byId(id){return places.filter(function(x){return x.id===id})[0]}
+function curL(){return lists.filter(function(l){return l.id===curList})[0]}
+function curName(){var l=curL();return l?l.name:'清單'}
+function isOwner(){var l=curL();return !!(l&&user&&l.owner===user.uid)}
+function localPlaces(){try{return JSON.parse(localStorage.getItem('places2')||'[]')}catch(e){return[]}}
 
 /* 地圖 */
-var dark=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;
 var map=L.map('map',{zoomControl:false}).setView([25.04,121.55],12);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=cb1_56oz_1_35a8fb38abf34192e1e29ae3',{subdomains:'abcd',maxNativeZoom:18,maxZoom:20,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attribution/">CARTO</a>'}).addTo(map);
 var layer=L.layerGroup().addTo(map),meDot=null;
 var icon=L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-12]});
 var iconSel=L.divIcon({className:'',html:'<div class="pin sel"></div>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-14]});
 
-/* 底部面板：三段高度，可拖曳或點擊把手 */
+/* 底部面板 */
 var H=[140,0,0];
 function calcH(){H=[140,Math.round(innerHeight*.5),innerHeight-120]}
 function setH(px){document.documentElement.style.setProperty('--h',px+'px')}
@@ -122,7 +174,7 @@ function renderMarkers(){
  layer.clearLayers();markers={};
  places.forEach(function(p){
   var m=L.marker([p.lat,p.lng],{icon:p.id===sel?iconSel:icon}).addTo(layer);
-  m.bindPopup('<b>'+esc(p.name)+'</b><br><span class="mut">'+esc(p.city)+' '+esc(p.district)+'</span><br><a href="'+esc(gm(p))+'" target="_blank" rel="noopener">在 Google Map 開啟</a>');
+  m.bindPopup('<b>'+esc(p.name)+'</b><br><span class="mut">'+esc(p.city)+' '+esc(p.district)+'</span>'+(p.note?'<br>'+esc(p.note):'')+'<br><a href="'+esc(gm(p))+'" target="_blank" rel="noopener">在 Google Map 開啟</a>　<a href="#" data-a="edit" data-id="'+esc(p.id)+'">編輯</a>');
   m.on('click',function(){pick(p.id,true)});
   markers[p.id]=m;
  });
@@ -131,30 +183,32 @@ function pick(id,fromMap){
  if(sel&&markers[sel])markers[sel].setIcon(icon);
  sel=id;if(markers[id])markers[id].setIcon(iconSel);
  if(!fromMap){
-  var p=places.filter(function(x){return x.id===id})[0];if(!p)return;
+  var p=byId(id);if(!p)return;
   snap(0);
   map.setView([p.lat,p.lng],Math.max(map.getZoom(),15),{animate:false});
-  map.panBy([0,(H[0]-0)/2],{animate:false});
+  map.panBy([0,H[0]/2],{animate:false});
   setTimeout(function(){if(markers[id])markers[id].openPopup()},60);
  }
 }
-function rowNear(x){return '<div class="row"><div class="g" onclick="pick('+x.p.id+')"><b>'+esc(x.p.name)+'</b><span class="mut">'+esc(x.p.city)+' '+esc(x.p.district)+'</span></div><span class="d">'+fmt(x.d)+'</span><a class="go" href="'+esc(gm(x.p))+'" target="_blank" rel="noopener">開啟</a></div>'}
+function noteHtml(p){return p.note?'<span class="nt">'+esc(p.note)+'</span>':''}
+function rowNear(x){return '<div class="row"><div class="g" data-a="pick" data-id="'+esc(x.p.id)+'"><b>'+esc(x.p.name)+'</b><span class="mut">'+esc(x.p.city)+' '+esc(x.p.district)+'</span>'+noteHtml(x.p)+'</div><span class="d">'+fmt(x.d)+'</span><a class="go" href="'+esc(gm(x.p))+'" target="_blank" rel="noopener">開啟</a></div>'}
 function sec(title,list,empty){
  return '<h3 class="sec">'+title+'<small>'+list.length+'</small></h3>'+(list.length?list.map(rowNear).join(''):'<div class="empty" style="padding:14px 0">'+empty+'</div>');
 }
 function nearHtml(){
- if(!places.length)return '<div class="empty">還沒有地點。到 Google 地圖按「分享」，複製連結貼到上方即可。</div>';
+ if(!places.length)return '<div class="empty">這份清單還沒有地點。到 Google 地圖按「分享」，複製連結貼到上方即可。</div>';
  if(!me)return '<div class="empty">定位中，請允許瀏覽器使用位置。</div>';
  var G=groups();
  return sec('20 公里內',G.near,'這個範圍沒有地點')+sec('20 到 50 公里',G.far,'這個範圍沒有地點')+(G.out?'<div class="note">另有 '+G.out+' 個地點在 50 公里外，請到「全部」查看</div>':'');
 }
 function dbHtml(){
- if(!places.length)return '<div class="empty">還沒有地點。</div>';
- var g={},h='<div style="padding:8px 0 0"><button class="btn" style="color:var(--acc);font-size:14px;font-weight:600" onclick="txt()">匯出 txt</button></div>';places.forEach(function(p){(g[p.city]=g[p.city]||{});(g[p.city][p.district]=g[p.city][p.district]||[]).push(p)});
+ if(!places.length)return '<div class="empty">這份清單還沒有地點。</div>';
+ var g={},h='<div style="padding:8px 0 0"><button class="btn" style="color:var(--acc);font-size:14px;font-weight:600" data-a="txt">匯出 txt</button></div>';
+ places.forEach(function(p){(g[p.city]=g[p.city]||{});(g[p.city][p.district]=g[p.city][p.district]||[]).push(p)});
  Object.keys(g).forEach(function(c){h+='<h2>'+esc(c)+'</h2>';
   Object.keys(g[c]).forEach(function(d){h+='<h3>'+esc(d)+'　'+g[c][d].length+'</h3>';
-   g[c][d].forEach(function(p){h+='<div class="row"><div class="g" onclick="pick('+p.id+')"><b>'+esc(p.name)+'</b></div><a class="go" href="'+esc(gm(p))+'" target="_blank" rel="noopener">開啟</a><button class="btn" onclick="edit('+p.id+')">改分類</button><button class="btn" onclick="del('+p.id+')">刪除</button></div>'})})});
- return h+'<h2>備份</h2><div class="row"><button class="btn" onclick="exp()">複製備份</button><button class="btn" onclick="imp()">匯入備份</button><span class="mut">資料存在這支手機的瀏覽器裡</span></div>';
+   g[c][d].forEach(function(p){h+='<div class="row"><div class="g" data-a="pick" data-id="'+esc(p.id)+'"><b>'+esc(p.name)+'</b>'+noteHtml(p)+'</div><a class="go" href="'+esc(gm(p))+'" target="_blank" rel="noopener">開啟</a><button class="btn" data-a="edit" data-id="'+esc(p.id)+'">編輯</button><button class="btn" data-a="del" data-id="'+esc(p.id)+'">刪除</button></div>'})})});
+ return h;
 }
 function renderSheet(){
  var G=groups(),b=$('#body'),top=b.scrollTop;
@@ -164,7 +218,9 @@ function renderSheet(){
  b.innerHTML=tab==='near'?nearHtml():dbHtml();
  b.scrollTop=top;
 }
+function renderTop(){var l=curL();$('#chip').textContent=(l?l.name+((l.members||[]).length>1?'（'+l.members.length+' 人）':''):'清單')+' ▾'}
 function render(){renderMarkers();renderSheet()}
+function fitAll(){var l=places.map(function(p){return[p.lat,p.lng]});if(l.length)map.fitBounds(L.latLngBounds(l),{padding:[40,40],maxZoom:15,animate:false})}
 function setTab(t){
  tab=t;if(idx===0)snap(1);renderSheet();$('#body').scrollTop=0;
  if(t==='db')return;
@@ -173,31 +229,97 @@ function setTab(t){
  if(l.length>1)setTimeout(function(){map.fitBounds(L.latLngBounds(l),{paddingTopLeft:[30,90],paddingBottomRight:[30,H[1]+20],maxZoom:16,animate:false})},260);
 }
 
-/* 編輯 */
-function edit(id){var p=places.filter(function(x){return x.id===id})[0];
- var v=prompt('城市 / 區（用 / 分隔）',p.city+' / '+p.district);if(v===null)return;
- var a=v.split('/');p.city=(a[0]||'').trim()||p.city;p.district=(a[1]||'').trim()||p.district;save();render()}
-function del(id){if(confirm('刪除這個地點？')){places=places.filter(function(p){return p.id!==id});if(sel===id)sel=null;save();render()}}
-function exp(){var t=JSON.stringify(places);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){say('備份已複製')},function(){prompt('複製這段文字：',t)})}
-function txt(){
- var l=places.slice().sort(function(x,y){return (x.city+x.district).localeCompare(y.city+y.district,'zh-Hant')});
- var t=l.map(function(p){return '店名:'+p.name+'\nGoogle Map:'+gm(p)}).join('\n\n')+'\n';
- var u=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'})),e=document.createElement('a');
- e.href=u;e.download='我的地點.txt';document.body.appendChild(e);e.click();e.remove();
- setTimeout(function(){URL.revokeObjectURL(u)},5000);say('已匯出 '+l.length+' 個地點');
+/* 登入 */
+function showLogin(){$('#login').classList.add('show');$('#lgWait').style.display='none';$('#lgText').style.display='';$('#lgBtn').style.display=''}
+function hideLogin(){$('#login').classList.remove('show')}
+function lgErr(m){$('#lgMsg').textContent=m}
+function login(){
+ lgErr('');
+ var pr=new GoogleAuthProvider();pr.setCustomParameters({prompt:'select_account'});
+ signInWithPopup(auth,pr).catch(function(e){
+  var c=e.code||'';
+  if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment')return signInWithRedirect(auth,pr);
+  if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')return;
+  if(c==='auth/unauthorized-domain')lgErr('這個網址還沒加入 Firebase 的授權網域，請到 Authentication → 設定 → 已授權的網域新增。');
+  else lgErr('登入失敗：'+(e.message||c));
+ });
 }
-function imp(){var v=prompt('貼上備份內容');if(!v)return;try{JSON.parse(v).forEach(function(p){if(!places.some(function(x){return x.id===p.id}))places.push(p)});save();render();say('已匯入')}catch(e){say('備份格式不正確',true)}}
+$('#lgBtn').onclick=login;
+setTimeout(function(){if(!authReady)lgErr('載入時間較長，請確認網路後重新整理')},10000);
+onAuthStateChanged(auth,function(u){
+ authReady=true;
+ if(!u){user=null;stopAll();showLogin();return}
+ user={uid:u.uid,email:(u.email||'').toLowerCase(),name:u.displayName||''};
+ hideLogin();startLists();
+});
+function stopAll(){
+ if(unL)unL();if(unP)unP();unL=unP=null;lists=[];places=[];curList=null;sel=null;readyDone=false;
+ render();renderTop();$('#lm').classList.remove('show');
+}
 
-/* 加入地點 */
+/* 清單與地點（Firestore） */
+function startLists(){
+ if(unL)unL();
+ unL=onSnapshot(query(collection(db,'lists'),where('members','array-contains',user.email)),function(snap){
+  lists=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x}).sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)});
+  if(!lists.length){
+   if(!snap.metadata.fromCache&&!making){making=true;createList('我的地點',true)}
+   renderTop();renderListModal();return;
+  }
+  if(!lists.some(function(l){return l.id===curList})){
+   var saved=null;try{saved=localStorage.getItem('curList')}catch(e){}
+   var pk=lists.filter(function(l){return l.id===saved})[0]||lists[0];
+   switchList(pk.id);
+  }
+  renderTop();renderListModal();
+ },function(e){say('讀取清單失敗：'+e.message,true)});
+}
+function createList(name,sw){
+ return addDoc(collection(db,'lists'),{name:name,owner:user.uid,ownerEmail:user.email,members:[user.email],createdAt:Date.now()})
+ .then(function(r){making=false;if(sw)switchList(r.id);return r})
+ .catch(function(e){making=false;say('建立清單失敗：'+e.message,true)});
+}
+function switchList(id){
+ curList=id;try{localStorage.setItem('curList',id)}catch(e){}
+ if(unP)unP();places=[];sel=null;fitted=false;render();renderTop();
+ unP=onSnapshot(collection(db,'lists',id,'places'),function(snap){
+  places=snap.docs.map(function(d){var x=d.data();x.id=d.id;return x}).sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)});
+  render();
+  if(!fitted&&places.length){fitAll();fitted=true}
+  if(focusNext&&byId(focusNext)){var f=focusNext;focusNext=null;pick(f)}
+  afterReady();
+ },function(e){say('讀取地點失敗：'+e.message,true)});
+}
+function afterReady(){
+ if(pending){var t=pending;pending=null;add(t)}
+ if(!readyDone){readyDone=true;checkClip()}
+ if(!importAsked){importAsked=true;setTimeout(maybeImport,800)}
+}
+function maybeImport(){
+ var l=localPlaces(),done='';try{done=localStorage.getItem('imported')||''}catch(e){}
+ if(!l.length||done)return;
+ if(confirm('這支手機裡有 '+l.length+' 個舊的本機地點，要匯入到「'+curName()+'」嗎？'))doImport(l);
+ else{try{localStorage.setItem('imported','no')}catch(e){}}
+}
+function doImport(l){
+ var b=writeBatch(db),col=collection(db,'lists',curList,'places'),n=0;
+ l.forEach(function(p){
+  if(places.some(function(x){return Math.abs(x.lat-p.lat)<1e-5&&Math.abs(x.lng-p.lng)<1e-5}))return;
+  b.set(doc(col),{name:p.name,note:p.note||'',city:p.city||'未分類',district:p.district||'未分類',lat:p.lat,lng:p.lng,url:p.url||'',addedBy:user.email,createdAt:p.id||Date.now()});n++;
+ });
+ if(!n){say('沒有需要匯入的新地點');return}
+ b.commit().then(function(){try{localStorage.setItem('imported','yes')}catch(e){}say('已匯入 '+n+' 個地點')}).catch(function(e){say('匯入失敗：'+e.message,true)});
+}
 function add(text){
  text=(text||'').trim();if(!text)return;
+ if(!curList){pending=text;say('準備中…');return}
  say('解析中…');
  fetch('/api/resolve?url='+encodeURIComponent(text)).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'解析失敗');return d})})
  .then(function(d){
   var dup=places.filter(function(p){return Math.abs(p.lat-d.lat)<1e-5&&Math.abs(p.lng-d.lng)<1e-5})[0];
-  if(dup){say('已經存過了：'+dup.name);pick(dup.id);return}
-  var p={id:Date.now(),name:d.name,city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url};
-  places.push(p);save();$('#url').value='';say('已加入：'+p.name+'（'+p.city+' '+p.district+'）');render();pick(p.id);
+  if(dup){say('這份清單已經有了：'+dup.name);pick(dup.id);return}
+  return addDoc(collection(db,'lists',curList,'places'),{name:d.name,note:'',city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url,addedBy:user.email,createdAt:Date.now()})
+  .then(function(r){$('#url').value='';focusNext=r.id;say('已加入：'+d.name+'（'+d.city+' '+d.district+'）')});
  }).catch(function(e){say(e.message,true)});
 }
 $('#go').onclick=function(){
@@ -209,6 +331,103 @@ $('#go').onclick=function(){
 $('#url').addEventListener('paste',function(){setTimeout(function(){add($('#url').value)},0)});
 $('#url').addEventListener('keydown',function(e){if(e.key==='Enter')add($('#url').value)});
 
+/* 編輯地點 */
+var editId=null;
+function openEdit(id){
+ var p=byId(id);if(!p)return;
+ editId=id;$('#e_name').value=p.name;$('#e_note').value=p.note||'';$('#e_city').value=p.city;$('#e_district').value=p.district;
+ $('#modal').classList.add('show');
+}
+function closeEdit(){$('#modal').classList.remove('show');editId=null}
+function saveEdit(){
+ var p=byId(editId);if(!p)return;
+ var f={name:$('#e_name').value.trim()||p.name,note:$('#e_note').value.trim(),city:$('#e_city').value.trim()||p.city,district:$('#e_district').value.trim()||p.district};
+ updateDoc(doc(db,'lists',curList,'places',editId),f).then(function(){say('已儲存')}).catch(function(e){say('儲存失敗：'+e.message,true)});
+ closeEdit();
+}
+$('#e_cancel').onclick=closeEdit;$('#e_save').onclick=saveEdit;
+$('#modal').addEventListener('click',function(e){if(e.target.id==='modal')closeEdit()});
+function del(id){if(confirm('刪除這個地點？'))deleteDoc(doc(db,'lists',curList,'places',id)).catch(function(e){say('刪除失敗：'+e.message,true)})}
+function txt(){
+ var l=places.slice().sort(function(x,y){return (x.city+x.district).localeCompare(y.city+y.district,'zh-Hant')});
+ var t=l.map(function(p){return '店名:'+p.name+(p.note?'\n備註:'+p.note:'')+'\nGoogle Map:'+gm(p)}).join('\n\n')+'\n';
+ var u=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'})),e=document.createElement('a');
+ e.href=u;e.download=curName()+'.txt';document.body.appendChild(e);e.click();e.remove();
+ setTimeout(function(){URL.revokeObjectURL(u)},5000);say('已匯出 '+l.length+' 個地點');
+}
+
+/* 清單與成員視窗 */
+function renderListModal(){
+ var el=$('#lm');if(!el.classList.contains('show')||!user)return;
+ var l=curL(),h='<div class="card"><h2>清單</h2>';
+ h+=lists.map(function(x){return '<div class="row" data-a="sw" data-id="'+esc(x.id)+'"><div class="g"><b>'+esc(x.name)+'</b><span class="mut">'+(x.members||[]).length+' 位成員</span></div>'+(x.id===curList?'<span class="d" style="color:var(--acc)">使用中</span>':'')+'</div>'}).join('');
+ h+='<button class="pbtn ghost wide" data-a="newList">＋ 新增清單</button>';
+ if(l){
+  h+='<h3 class="sec">「'+esc(l.name)+'」的成員</h3>'+(l.members||[]).map(function(m){
+   var own=m===l.ownerEmail;
+   return '<div class="row"><div class="g"><b>'+esc(m)+'</b></div>'+(own?'<span class="mut">擁有者</span>':(isOwner()?'<button class="btn" data-a="rm" data-email="'+esc(m)+'">移除</button>':''))+'</div>'}).join('');
+  if(isOwner())h+='<div class="inv"><input id="inv" type="email" inputmode="email" placeholder="對方的 Google 信箱"><button class="pbtn" data-a="invite">邀請</button></div><div class="mut" style="margin-top:6px">對方用這個信箱登入，就會看到這份清單</div><div class="acts" style="justify-content:flex-start;margin-top:10px"><button class="pbtn ghost" data-a="rename">重新命名</button><button class="pbtn ghost" data-a="delList">刪除清單</button></div>';
+  else h+='<div class="mut" style="margin-top:8px">只有擁有者可以邀請或移除成員</div>';
+ }
+ var n=localPlaces().length;
+ if(n)h+='<button class="pbtn ghost wide" data-a="import">匯入這支手機的舊地點（'+n+'）</button>';
+ h+='<h3 class="sec">帳號</h3><div class="row"><div class="g mut">'+esc(user.email)+'</div><button class="btn" data-a="logout">登出</button></div>';
+ h+='<div class="acts"><button class="pbtn ghost" data-a="closeList">關閉</button></div></div>';
+ el.innerHTML=h;
+}
+$('#lm').addEventListener('click',function(e){if(e.target.id==='lm')$('#lm').classList.remove('show')});
+
+/* 全域點擊處理 */
+document.addEventListener('click',function(e){
+ var t=e.target.closest('[data-a]');if(!t)return;
+ var a=t.dataset.a,id=t.dataset.id;
+ if(t.tagName==='A'&&t.getAttribute('href')==='#')e.preventDefault();
+ if(a==='pick')pick(id);
+ else if(a==='edit')openEdit(id);
+ else if(a==='del')del(id);
+ else if(a==='txt')txt();
+ else if(a==='openList'){if(!user)return;$('#lm').classList.add('show');renderListModal()}
+ else if(a==='closeList')$('#lm').classList.remove('show');
+ else if(a==='sw'){switchList(id);renderListModal()}
+ else if(a==='newList'){var n=prompt('新清單的名稱','');if(n&&n.trim())createList(n.trim(),true)}
+ else if(a==='rename'){var n2=prompt('清單名稱',curName());if(n2&&n2.trim())updateDoc(doc(db,'lists',curList),{name:n2.trim()}).catch(function(e){say(e.message,true)})}
+ else if(a==='invite'){
+  var v=($('#inv').value||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)){say('信箱格式不正確',true);return}
+  updateDoc(doc(db,'lists',curList),{members:arrayUnion(v)}).then(function(){say('已邀請 '+v)}).catch(function(e){say('邀請失敗：'+e.message,true)});
+ }
+ else if(a==='rm'){var m=t.dataset.email;if(confirm('移除 '+m+'？'))updateDoc(doc(db,'lists',curList),{members:arrayRemove(m)}).catch(function(e){say(e.message,true)})}
+ else if(a==='delList'){
+  if(!confirm('刪除「'+curName()+'」和裡面所有地點？所有成員都會看不到，無法復原。'))return;
+  var lid=curList;if(unP){unP();unP=null}
+  getDocs(collection(db,'lists',lid,'places')).then(function(s){var b=writeBatch(db);s.docs.forEach(function(d){b.delete(d.ref)});return b.commit()})
+  .then(function(){return deleteDoc(doc(db,'lists',lid))}).then(function(){say('已刪除清單')}).catch(function(e){say('刪除失敗：'+e.message,true)});
+ }
+ else if(a==='import'){var l=localPlaces();if(l.length)doImport(l)}
+ else if(a==='logout'){$('#lm').classList.remove('show');signOut(auth)}
+});
+
+/* 剪貼簿偵測 */
+var MAPRE=/maps\.app\.goo\.gl|goo\.gl\/maps|google\.[a-z.]+\/maps|maps\.google\.[a-z.]+/i;
+var clipSeen='',clipUrl='',clipBusy=false,needTap=false,tapped=false;
+try{clipSeen=localStorage.getItem('clipSeen')||''}catch(e){}
+function markClip(t){clipSeen=t;try{localStorage.setItem('clipSeen',t)}catch(e){}}
+function hideClip(){$('#clip').classList.remove('show')}
+function checkClip(){
+ if(!user||clipBusy||document.hidden||!navigator.clipboard||!navigator.clipboard.readText)return;
+ clipBusy=true;
+ navigator.clipboard.readText().then(function(t){
+  clipBusy=false;needTap=false;t=(t||'').trim();
+  if(!t||t===clipSeen||!MAPRE.test(t))return;
+  var m=t.match(/https?:\/\/[^\s]+/);if(!m)return;
+  clipUrl=t;$('#clipUrl').textContent=m[0];$('#clip').classList.add('show');
+ },function(){clipBusy=false;needTap=true});
+}
+$('#clipYes').onclick=function(){markClip(clipUrl);hideClip();add(clipUrl)};
+$('#clipNo').onclick=function(){markClip(clipUrl);hideClip()};
+document.addEventListener('visibilitychange',function(){if(!document.hidden){tapped=false;checkClip()}});
+document.addEventListener('pointerdown',function(){if(needTap&&!tapped){tapped=true;checkClip()}});
+
 /* 定位 */
 function locate(){
  if(!navigator.geolocation){say('這個瀏覽器不支援定位',true);return}
@@ -218,18 +437,16 @@ function locate(){
   else meDot.setLatLng([me.lat,me.lng]);
   if(first){first=false;
    var G=groups(),l=G.near.map(function(x){return[x.p.lat,x.p.lng]});l.push([me.lat,me.lng]);
-   if(l.length>1)map.fitBounds(L.latLngBounds(l),{paddingTopLeft:[30,90],paddingBottomRight:[30,H[0]+20],maxZoom:15,animate:false});
-   else map.setView([me.lat,me.lng],15);
-   fitted=true}
+   if(l.length>1){map.fitBounds(L.latLngBounds(l),{paddingTopLeft:[30,90],paddingBottomRight:[30,H[0]+20],maxZoom:15,animate:false});fitted=true}
+   else if(!places.length)map.setView([me.lat,me.lng],15)}
   if(!lastMe||dist(lastMe,me)>50){lastMe=me;renderSheet()}
  },function(){say('無法定位，請允許位置權限',true)},{enableHighAccuracy:true,maximumAge:10000});
 }
 $('#loc').onclick=function(){if(me){map.setView([me.lat,me.lng],15,{animate:false});map.panBy([0,H[idx]/2],{animate:false})}else locate()};
 
-render();locate();
-if(places.length&&!fitted){map.fitBounds(L.latLngBounds(places.map(function(p){return[p.lat,p.lng]})),{padding:[40,40],maxZoom:15,animate:false})}
+render();renderTop();locate();
 var q=new URLSearchParams(location.search),sh=q.get('url')||q.get('text')||'';
-if(sh){history.replaceState(null,'','/');add(sh)}
+if(sh){history.replaceState(null,'','/');pending=sh}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});
 </script>
 </body>
