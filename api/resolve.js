@@ -1,6 +1,6 @@
 // Vercel Serverless Function：展開 Google Map 連結 → 座標 + 名稱 + 城市/區
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-const HOST = /(^|\.)(google\.[a-z.]+|goo\.gl|g\.co)$/i;
+const HOST = /(^|\.)(google\.[a-z.]+|goo\.gl|g\.co|share\.google)$/i;
 
 function fromUrl(s) {
   let d = s;
