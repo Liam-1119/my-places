@@ -3,71 +3,75 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f5c52">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon.svg">
 <title>我的地點</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--bg:#eef3ef;--ink:#0e2a26;--mut:#5d756f;--pine:#0f5c52;--pin:#f2a007;--card:#fff;--line:#d3ddd7}
-@media (prefers-color-scheme:dark){:root{--bg:#101a18;--ink:#e6f0ec;--mut:#8fa8a1;--card:#192624;--line:#2a3b38;color-scheme:dark}}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0}
-body{display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
-header{background:var(--pine);padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 10px;color:#fff}
-.bar{display:flex;gap:8px}
-.bar input{flex:1;min-width:0;border:0;border-radius:10px;padding:11px 12px;font:inherit;background:#fff;color:#0e2a26}
-.bar button{border:0;border-radius:10px;padding:0 14px;font:inherit;font-weight:700;background:var(--pin);color:#2b1c00}
-.bar button.alt{background:rgba(255,255,255,.18);color:#fff;font-weight:500}
-#say{font-size:13px;min-height:20px;margin-top:6px;opacity:.95}
-#say.err{color:#ffd6c9}
-main{flex:1;position:relative;min-height:0}
-section{position:absolute;inset:0;overflow:auto;display:none}
-section.on{display:block}
-#v-map{overflow:hidden}
-#map{height:100%;width:100%}
-.fab{position:absolute;right:12px;bottom:14px;z-index:500;border:0;border-radius:50%;width:48px;height:48px;background:var(--card);color:var(--pine);font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.list{padding:12px}
-.row{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+:root{--bg:#fff;--ink:#111;--mut:#8a8a8e;--line:#ececee;--chip:#f2f2f4;--acc:#0f766e;--err:#d93025;--shadow:0 6px 24px rgba(0,0,0,.14);--h:140px}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1b1d;--ink:#f2f2f3;--mut:#8e8e93;--line:#2c2c2f;--chip:#2a2a2d;--acc:#4fd1c0;--err:#ff7b6e;--shadow:0 6px 24px rgba(0,0,0,.55);color-scheme:dark}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,"SF Pro Text","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+#map{position:absolute;inset:0}
+.leaflet-bottom{bottom:var(--h);transition:bottom .25s ease}
+.leaflet-container{font:inherit}
+.leaflet-control-attribution{background:transparent!important;font-size:10px;color:var(--mut)!important}
+.leaflet-control-attribution a{color:var(--mut)!important}
+.top{position:absolute;z-index:1000;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px)}
+.pill{display:flex;align-items:center;background:var(--bg);border-radius:999px;box-shadow:var(--shadow);padding:4px 4px 4px 18px}
+.pill input{flex:1;min-width:0;border:0;outline:0;background:none;color:var(--ink);font:inherit;padding:9px 0}
+.pill button{border:0;border-radius:999px;background:var(--ink);color:var(--bg);font:inherit;font-weight:600;padding:9px 18px}
+#say{display:inline-block;margin-top:8px;max-width:100%;background:var(--bg);color:var(--ink);border-radius:999px;box-shadow:var(--shadow);padding:6px 14px;font-size:13px}
+#say:empty{display:none}
+#say.err{color:var(--err)}
+.sheet{position:absolute;z-index:1000;left:0;right:0;bottom:0;height:var(--h);background:var(--bg);border-radius:20px 20px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.14);display:flex;flex-direction:column;transition:height .25s ease}
+.sheet.drag,.sheet.drag~*{transition:none}
+.grab{padding:10px 0 8px;touch-action:none;cursor:grab}
+.grab i{display:block;width:36px;height:4px;border-radius:2px;background:var(--mut);opacity:.45;margin:0 auto}
+.fab{position:absolute;right:12px;top:-56px;width:44px;height:44px;border:0;border-radius:50%;background:var(--bg);color:var(--ink);box-shadow:var(--shadow);font-size:20px;line-height:1}
+.seg{display:flex;gap:4px;margin:0 16px 4px;background:var(--chip);border-radius:10px;padding:3px}
+.seg button{flex:1;border:0;background:none;color:var(--mut);font:inherit;font-size:14px;padding:6px 0;border-radius:8px}
+.seg button.on{background:var(--bg);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+.seg small{font-size:12px;opacity:.7;margin-left:3px}
+.body{flex:1;overflow:auto;padding:0 16px calc(env(safe-area-inset-bottom,0px) + 16px);-webkit-overflow-scrolling:touch}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
 .row .g{flex:1;min-width:0}
-.row b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mut{color:var(--mut);font-size:13px}
-.d{color:var(--pine);font-weight:700;white-space:nowrap}
-a{color:var(--pine);font-weight:600;text-decoration:none}
-h3{margin:16px 2px 6px;font-size:17px}
-h4{margin:10px 2px 4px;font-size:14px;color:var(--mut);font-weight:600}
-.sm{border:1px solid var(--line);background:none;color:var(--mut);border-radius:8px;padding:4px 8px;font:inherit;font-size:13px}
-.empty{padding:32px 20px;text-align:center;color:var(--mut)}
-nav{display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav button{flex:1;border:0;background:none;color:var(--mut);padding:12px 0;font:inherit;font-size:14px}
-nav button.on{color:var(--pine);font-weight:700;box-shadow:inset 0 3px 0 var(--pine)}
-.pin{width:22px;height:22px;background:var(--pin);border:3px solid #0e2a26;border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
-.leaflet-popup-content{font:14px/1.5 -apple-system,"PingFang TC","Noto Sans TC",sans-serif;color:#0e2a26}
+.d{font-size:14px;white-space:nowrap}
+a.go{color:var(--acc);text-decoration:none;font-size:14px;font-weight:600}
+.btn{border:0;background:none;color:var(--mut);font:inherit;font-size:13px;padding:4px 2px}
+h2{font-size:17px;margin:20px 0 0}
+h3{font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 0}
+.empty{padding:28px 0;text-align:center;color:var(--mut);font-size:14px}
+.note{padding:14px 0 0;color:var(--mut);font-size:13px;text-align:center}
+.pin{width:20px;height:20px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);transition:transform .15s}
+.pin.sel{transform:scale(1.35);background:#e5484d}
+.leaflet-popup-content-wrapper{border-radius:14px;background:var(--bg);color:var(--ink);box-shadow:var(--shadow)}
+.leaflet-popup-tip{background:var(--bg)}
+.leaflet-popup-content{margin:12px 16px;font-size:14px;line-height:1.5}
+.leaflet-popup-content a{color:var(--acc);font-weight:600;text-decoration:none}
 </style>
 </head>
 <body>
-<header>
-  <div class="bar">
-    <input id="url" placeholder="貼上 Google Map 連結" inputmode="url" autocomplete="off">
-    <button id="go">加入</button>
-    <button id="clip" class="alt">貼上</button>
-  </div>
+<div id="map"></div>
+<div class="top">
+  <div class="pill"><input id="url" placeholder="貼上 Google Map 連結" inputmode="url" autocomplete="off"><button id="go">加入</button></div>
   <div id="say"></div>
-</header>
-<main>
-  <section id="v-map" class="on"><div id="map"></div><button class="fab" id="loc" aria-label="回到我的位置">◎</button></section>
-  <section id="v-near"><div class="list" id="near"></div></section>
-  <section id="v-db"><div class="list" id="db"></div></section>
-</main>
-<nav id="nav">
-  <button data-t="map" class="on">地圖</button>
-  <button data-t="near">附近</button>
-  <button data-t="db">資料庫</button>
-</nav>
+</div>
+<div class="sheet" id="sheet">
+  <button class="fab" id="loc" aria-label="我的位置">◎</button>
+  <div class="grab" id="grab"><i></i></div>
+  <div class="seg" id="seg"></div>
+  <div class="body" id="body"></div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var $=function(s){return document.querySelector(s)};
-var places=[],me=null,tab='map',markers={},fitted=false,first=true;
+var places=[],me=null,lastMe=null,tab='near',sel=null,markers={},fitted=false,first=true,idx=0,sayT=0;
+var NEAR=20000,FAR=50000;
 try{places=JSON.parse(localStorage.getItem('places2')||'[]')}catch(e){}
 function save(){try{localStorage.setItem('places2',JSON.stringify(places))}catch(e){}}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -75,95 +79,144 @@ function gm(p){return p.url||('https://www.google.com/maps/search/?api=1&query='
 function dist(a,b){var R=6371000,r=Math.PI/180,x=Math.sin((b.lat-a.lat)*r/2),y=Math.sin((b.lng-a.lng)*r/2);
  return 2*R*Math.asin(Math.sqrt(x*x+Math.cos(a.lat*r)*Math.cos(b.lat*r)*y*y))}
 function fmt(m){return m<1000?Math.round(m)+' 公尺':(m/1000).toFixed(m<10000?1:0)+' 公里'}
-function say(t,err){var e=$('#say');e.textContent=t;e.className=err?'err':''}
+function say(t,err){var e=$('#say');e.textContent=t;e.className=err?'err':'';clearTimeout(sayT);sayT=setTimeout(function(){e.textContent=''},err?7000:4000)}
 
+/* 地圖 */
+var dark=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;
 var map=L.map('map',{zoomControl:false}).setView([25.04,121.55],12);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/'+(dark?'dark_all':'light_all')+'/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,attribution:'© OpenStreetMap © CARTO'}).addTo(map);
 var layer=L.layerGroup().addTo(map),meDot=null;
-var pinIcon=L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[22,22],iconAnchor:[6,24],popupAnchor:[5,-22]});
+var icon=L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-12]});
+var iconSel=L.divIcon({className:'',html:'<div class="pin sel"></div>',iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-14]});
 
-function setTab(t){
- tab=t;
- document.querySelectorAll('section').forEach(function(s){s.classList.toggle('on',s.id==='v-'+t)});
- document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});
- if(t==='map')setTimeout(function(){map.invalidateSize()},50);
-}
-document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){setTab(b.dataset.t)}});
+/* 底部面板：三段高度，可拖曳或點擊把手 */
+var H=[140,0,0];
+function calcH(){H=[140,Math.round(innerHeight*.5),innerHeight-120]}
+function setH(px){document.documentElement.style.setProperty('--h',px+'px')}
+function snap(i){idx=i;setH(H[i])}
+calcH();snap(0);
+addEventListener('resize',function(){calcH();snap(idx)});
+(function(){
+ var g=$('#grab'),sh=$('#sheet'),y0=0,h0=0,moved=0,down=false;
+ g.addEventListener('pointerdown',function(e){down=true;moved=0;y0=e.clientY;h0=sh.getBoundingClientRect().height;g.setPointerCapture(e.pointerId);sh.classList.add('drag')});
+ g.addEventListener('pointermove',function(e){if(!down)return;var dy=y0-e.clientY;moved=Math.max(moved,Math.abs(dy));setH(Math.max(H[0],Math.min(H[2],h0+dy)))});
+ function end(){if(!down)return;down=false;sh.classList.remove('drag');
+  if(moved<6){snap(idx<2?idx+1:0);return}
+  var h=sh.getBoundingClientRect().height,b=0;H.forEach(function(v,i){if(Math.abs(v-h)<Math.abs(H[b]-h))b=i});snap(b)}
+ g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
+})();
 
-function focusPlace(id){
- var p=places.filter(function(x){return x.id===id})[0];if(!p)return;
- setTab('map');
- setTimeout(function(){map.invalidateSize();map.setView([p.lat,p.lng],16);if(markers[id])markers[id].openPopup()},80);
-}
+/* 資料分組 */
+function ranked(){return me?places.map(function(p){return{p:p,d:dist(me,p)}}).sort(function(a,b){return a.d-b.d}):[]}
+function groups(){var r=ranked();return{
+ near:r.filter(function(x){return x.d<=NEAR}),
+ far:r.filter(function(x){return x.d>NEAR&&x.d<=FAR}),
+ out:r.filter(function(x){return x.d>FAR}).length}}
 
-function renderMap(){
+/* 畫面 */
+function renderMarkers(){
  layer.clearLayers();markers={};
  places.forEach(function(p){
-  var m=L.marker([p.lat,p.lng],{icon:pinIcon}).addTo(layer);
-  m.bindPopup('<b>'+esc(p.name)+'</b><br>'+esc(p.city)+' '+esc(p.district)+'<br><a href="'+esc(gm(p))+'" target="_blank" rel="noopener">在 Google Map 開啟</a>');
+  var m=L.marker([p.lat,p.lng],{icon:p.id===sel?iconSel:icon}).addTo(layer);
+  m.bindPopup('<b>'+esc(p.name)+'</b><br><span class="mut">'+esc(p.city)+' '+esc(p.district)+'</span><br><a href="'+esc(gm(p))+'" target="_blank" rel="noopener">在 Google Map 開啟</a>');
+  m.on('click',function(){pick(p.id,true)});
   markers[p.id]=m;
  });
- if(!fitted&&places.length&&!me){
-  map.fitBounds(L.latLngBounds(places.map(function(p){return[p.lat,p.lng]})).pad(.2),{maxZoom:16});fitted=true;
+}
+function pick(id,fromMap){
+ if(sel&&markers[sel])markers[sel].setIcon(icon);
+ sel=id;if(markers[id])markers[id].setIcon(iconSel);
+ if(!fromMap){
+  var p=places.filter(function(x){return x.id===id})[0];if(!p)return;
+  snap(0);
+  map.setView([p.lat,p.lng],Math.max(map.getZoom(),15),{animate:false});
+  map.panBy([0,(H[0]-0)/2],{animate:false});
+  setTimeout(function(){if(markers[id])markers[id].openPopup()},60);
  }
 }
-function renderNear(){
- var h='';
- if(!places.length)h='<div class="empty">還沒有地點。到 Google Map 按「分享」，複製連結貼到上方就會自動加入。</div>';
- else if(!me)h='<div class="empty">定位中…請允許瀏覽器使用位置。</div>';
- else h=places.map(function(p){return{p:p,d:dist(me,p)}}).sort(function(a,b){return a.d-b.d}).map(function(x){
-  return '<div class="row"><div class="g" onclick="focusPlace('+x.p.id+')"><b>'+esc(x.p.name)+'</b><span class="mut">'+esc(x.p.city)+' '+esc(x.p.district)+'</span></div><span class="d">'+fmt(x.d)+'</span><a href="'+esc(gm(x.p))+'" target="_blank" rel="noopener">開啟</a></div>'}).join('');
- $('#near').innerHTML=h;
+function rowNear(x){return '<div class="row"><div class="g" onclick="pick('+x.p.id+')"><b>'+esc(x.p.name)+'</b><span class="mut">'+esc(x.p.city)+' '+esc(x.p.district)+'</span></div><span class="d">'+fmt(x.d)+'</span><a class="go" href="'+esc(gm(x.p))+'" target="_blank" rel="noopener">開啟</a></div>'}
+function listHtml(list,empty,extra){
+ var h=!places.length?'<div class="empty">還沒有地點。到 Google 地圖按「分享」，複製連結貼到上方即可。</div>'
+  :!me?'<div class="empty">定位中，請允許瀏覽器使用位置。</div>'
+  :list.length?list.map(rowNear).join(''):'<div class="empty">'+empty+'</div>';
+ return h+(extra||'');
 }
-function renderDb(){
- if(!places.length){$('#db').innerHTML='<div class="empty">還沒有地點。</div>';return}
- var g={};places.forEach(function(p){(g[p.city]=g[p.city]||{});(g[p.city][p.district]=g[p.city][p.district]||[]).push(p)});
- var h='';
- Object.keys(g).forEach(function(c){h+='<h3>'+esc(c)+'</h3>';
-  Object.keys(g[c]).forEach(function(d){h+='<h4>'+esc(d)+'（'+g[c][d].length+'）</h4>';
-   g[c][d].forEach(function(p){h+='<div class="row"><div class="g" onclick="focusPlace('+p.id+')"><b>'+esc(p.name)+'</b></div><a href="'+esc(gm(p))+'" target="_blank" rel="noopener">開啟</a><button class="sm" onclick="edit('+p.id+')">改分類</button><button class="sm" onclick="del('+p.id+')">刪除</button></div>'})})});
- h+='<h3>備份</h3><div class="row"><button class="sm" onclick="exp()">複製備份</button><button class="sm" onclick="imp()">匯入備份</button><span class="mut">資料存在這支手機的瀏覽器裡</span></div>';
- $('#db').innerHTML=h;
+function dbHtml(){
+ if(!places.length)return '<div class="empty">還沒有地點。</div>';
+ var g={},h='';places.forEach(function(p){(g[p.city]=g[p.city]||{});(g[p.city][p.district]=g[p.city][p.district]||[]).push(p)});
+ Object.keys(g).forEach(function(c){h+='<h2>'+esc(c)+'</h2>';
+  Object.keys(g[c]).forEach(function(d){h+='<h3>'+esc(d)+'　'+g[c][d].length+'</h3>';
+   g[c][d].forEach(function(p){h+='<div class="row"><div class="g" onclick="pick('+p.id+')"><b>'+esc(p.name)+'</b></div><a class="go" href="'+esc(gm(p))+'" target="_blank" rel="noopener">開啟</a><button class="btn" onclick="edit('+p.id+')">改分類</button><button class="btn" onclick="del('+p.id+')">刪除</button></div>'})})});
+ return h+'<h2>備份</h2><div class="row"><button class="btn" onclick="exp()">複製備份</button><button class="btn" onclick="imp()">匯入備份</button><span class="mut">資料存在這支手機的瀏覽器裡</span></div>';
 }
-function render(){renderMap();renderNear();renderDb()}
+function renderSheet(){
+ var G=groups(),b=$('#body'),top=b.scrollTop;
+ $('#seg').innerHTML=[['near','附近（20 公里內）',G.near.length],['far','較遠（50 公里內）',G.far.length],['db','全部',places.length]].map(function(t){
+  return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?'on':'')+'">'+t[1].split('（')[0]+'<small>'+t[2]+'</small></button>'}).join('');
+ document.querySelectorAll('#seg button').forEach(function(x){x.onclick=function(){setTab(x.dataset.t)}});
+ var intro=tab==='near'?'<div class="note" style="padding:0 0 4px;text-align:left">20 公里內</div>':tab==='far'?'<div class="note" style="padding:0 0 4px;text-align:left">20 到 50 公里</div>':'';
+ if(tab==='near')b.innerHTML=intro+listHtml(G.near,'20 公里內沒有地點，看看「較遠」。');
+ else if(tab==='far')b.innerHTML=intro+listHtml(G.far,'20 到 50 公里之間沒有地點。',G.out?'<div class="note">另有 '+G.out+' 個地點在 50 公里外，請到「全部」查看</div>':'');
+ else b.innerHTML=dbHtml();
+ b.scrollTop=top;
+}
+function render(){renderMarkers();renderSheet()}
+function setTab(t){
+ tab=t;if(idx===0)snap(1);renderSheet();$('#body').scrollTop=0;
+ if(t==='db')return;
+ var G=groups(),l=(t==='near'?G.near:G.far).map(function(x){return[x.p.lat,x.p.lng]});
+ if(me)l.push([me.lat,me.lng]);
+ if(l.length>1)setTimeout(function(){map.fitBounds(L.latLngBounds(l),{paddingTopLeft:[30,90],paddingBottomRight:[30,H[1]+20],maxZoom:16,animate:false})},260);
+}
+
+/* 編輯 */
 function edit(id){var p=places.filter(function(x){return x.id===id})[0];
  var v=prompt('城市 / 區（用 / 分隔）',p.city+' / '+p.district);if(v===null)return;
  var a=v.split('/');p.city=(a[0]||'').trim()||p.city;p.district=(a[1]||'').trim()||p.district;save();render()}
-function del(id){if(confirm('刪除這個地點？')){places=places.filter(function(p){return p.id!==id});save();render()}}
+function del(id){if(confirm('刪除這個地點？')){places=places.filter(function(p){return p.id!==id});if(sel===id)sel=null;save();render()}}
 function exp(){var t=JSON.stringify(places);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){say('備份已複製')},function(){prompt('複製這段文字：',t)})}
 function imp(){var v=prompt('貼上備份內容');if(!v)return;try{JSON.parse(v).forEach(function(p){if(!places.some(function(x){return x.id===p.id}))places.push(p)});save();render();say('已匯入')}catch(e){say('備份格式不正確',true)}}
 
+/* 加入地點 */
 function add(text){
  text=(text||'').trim();if(!text)return;
  say('解析中…');
  fetch('/api/resolve?url='+encodeURIComponent(text)).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'解析失敗');return d})})
  .then(function(d){
   var dup=places.filter(function(p){return Math.abs(p.lat-d.lat)<1e-5&&Math.abs(p.lng-d.lng)<1e-5})[0];
-  if(dup){say('已經存過了：'+dup.name);focusPlace(dup.id);return}
+  if(dup){say('已經存過了：'+dup.name);pick(dup.id);return}
   var p={id:Date.now(),name:d.name,city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url};
-  places.push(p);save();$('#url').value='';say('已加入：'+p.name+'（'+p.city+' '+p.district+'）');render();focusPlace(p.id);
+  places.push(p);save();$('#url').value='';say('已加入：'+p.name+'（'+p.city+' '+p.district+'）');render();pick(p.id);
  }).catch(function(e){say(e.message,true)});
 }
-$('#go').onclick=function(){add($('#url').value)};
-$('#url').addEventListener('paste',function(){setTimeout(function(){add($('#url').value)},0)});
-$('#clip').onclick=function(){
- if(!navigator.clipboard||!navigator.clipboard.readText){say('這個瀏覽器不能讀剪貼簿，請長按輸入框貼上',true);return}
+$('#go').onclick=function(){
+ var v=$('#url').value;
+ if(v.trim())return add(v);
+ if(!navigator.clipboard||!navigator.clipboard.readText){say('請長按輸入框貼上連結',true);return}
  navigator.clipboard.readText().then(add,function(){say('沒有剪貼簿權限，請長按輸入框貼上',true)});
 };
+$('#url').addEventListener('paste',function(){setTimeout(function(){add($('#url').value)},0)});
+$('#url').addEventListener('keydown',function(e){if(e.key==='Enter')add($('#url').value)});
 
+/* 定位 */
 function locate(){
  if(!navigator.geolocation){say('這個瀏覽器不支援定位',true);return}
  navigator.geolocation.watchPosition(function(pos){
   me={lat:pos.coords.latitude,lng:pos.coords.longitude};
   if(!meDot)meDot=L.circleMarker([me.lat,me.lng],{radius:8,color:'#fff',weight:3,fillColor:'#2f7de1',fillOpacity:1}).addTo(map);
   else meDot.setLatLng([me.lat,me.lng]);
-  if(first){first=false;if(!fitted)map.setView([me.lat,me.lng],15)}
-  renderNear();
+  if(first){first=false;
+   var G=groups(),l=G.near.map(function(x){return[x.p.lat,x.p.lng]});l.push([me.lat,me.lng]);
+   if(l.length>1)map.fitBounds(L.latLngBounds(l),{paddingTopLeft:[30,90],paddingBottomRight:[30,H[0]+20],maxZoom:15,animate:false});
+   else map.setView([me.lat,me.lng],15);
+   fitted=true}
+  if(!lastMe||dist(lastMe,me)>50){lastMe=me;renderSheet()}
  },function(){say('無法定位，請允許位置權限',true)},{enableHighAccuracy:true,maximumAge:10000});
 }
-$('#loc').onclick=function(){if(me)map.setView([me.lat,me.lng],16);else locate()};
+$('#loc').onclick=function(){if(me){map.setView([me.lat,me.lng],15,{animate:false});map.panBy([0,H[idx]/2],{animate:false})}else locate()};
 
 render();locate();
+if(places.length&&!fitted){map.fitBounds(L.latLngBounds(places.map(function(p){return[p.lat,p.lng]})),{padding:[40,40],maxZoom:15,animate:false})}
 var q=new URLSearchParams(location.search),sh=q.get('url')||q.get('text')||'';
 if(sh){history.replaceState(null,'','/');add(sh)}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(function(){});
