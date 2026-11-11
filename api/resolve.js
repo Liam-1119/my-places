@@ -39,7 +39,7 @@ function nameFrom(finalUrl, html) {
 
 async function area(lat, lng) {
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&addressdetails=1&accept-language=zh-TW,en&lat=${lat}&lon=${lng}`,
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=12&addressdetails=1&accept-language=zh-TW,en&lat=${lat}&lon=${lng}`,
     { headers: { 'User-Agent': 'my-places-app/1.0 (personal use)' } }
   );
   const a = (await r.json()).address || {};
