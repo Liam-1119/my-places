@@ -1,0 +1,10 @@
+{
+  "name": "我的地點",
+  "short_name": "我的地點",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f5c52",
+  "theme_color": "#0f5c52",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }],
+  "share_target": { "action": "/", "method": "GET", "params": { "title": "title", "text": "text", "url": "url" } }
+}
