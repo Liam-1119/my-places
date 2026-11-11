@@ -143,7 +143,7 @@ function listHtml(list,empty,extra){
 }
 function dbHtml(){
  if(!places.length)return '<div class="empty">還沒有地點。</div>';
- var g={},h='';places.forEach(function(p){(g[p.city]=g[p.city]||{});(g[p.city][p.district]=g[p.city][p.district]||[]).push(p)});
+ var g={},h='<div style="padding:8px 0 0"><button class="btn" style="color:var(--acc);font-size:14px;font-weight:600" onclick="txt()">匯出 txt</button></div>';places.forEach(function(p){(g[p.city]=g[p.city]||{});(g[p.city][p.district]=g[p.city][p.district]||[]).push(p)});
  Object.keys(g).forEach(function(c){h+='<h2>'+esc(c)+'</h2>';
   Object.keys(g[c]).forEach(function(d){h+='<h3>'+esc(d)+'　'+g[c][d].length+'</h3>';
    g[c][d].forEach(function(p){h+='<div class="row"><div class="g" onclick="pick('+p.id+')"><b>'+esc(p.name)+'</b></div><a class="go" href="'+esc(gm(p))+'" target="_blank" rel="noopener">開啟</a><button class="btn" onclick="edit('+p.id+')">改分類</button><button class="btn" onclick="del('+p.id+')">刪除</button></div>'})})});
@@ -175,6 +175,13 @@ function edit(id){var p=places.filter(function(x){return x.id===id})[0];
  var a=v.split('/');p.city=(a[0]||'').trim()||p.city;p.district=(a[1]||'').trim()||p.district;save();render()}
 function del(id){if(confirm('刪除這個地點？')){places=places.filter(function(p){return p.id!==id});if(sel===id)sel=null;save();render()}}
 function exp(){var t=JSON.stringify(places);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){say('備份已複製')},function(){prompt('複製這段文字：',t)})}
+function txt(){
+ var l=places.slice().sort(function(x,y){return (x.city+x.district).localeCompare(y.city+y.district,'zh-Hant')});
+ var t=l.map(function(p){return '店名:'+p.name+'\nGoogle Map:'+gm(p)}).join('\n\n')+'\n';
+ var u=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'})),e=document.createElement('a');
+ e.href=u;e.download='我的地點.txt';document.body.appendChild(e);e.click();e.remove();
+ setTimeout(function(){URL.revokeObjectURL(u)},5000);say('已匯出 '+l.length+' 個地點');
+}
 function imp(){var v=prompt('貼上備份內容');if(!v)return;try{JSON.parse(v).forEach(function(p){if(!places.some(function(x){return x.id===p.id}))places.push(p)});save();render();say('已匯入')}catch(e){say('備份格式不正確',true)}}
 
 /* 加入地點 */
