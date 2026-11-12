@@ -44,17 +44,24 @@ async function area(lat, lng) {
   );
   const a = (await r.json()).address || {};
   let city = a.city || a.state || a.county || a.province || '';
-  const ward = Object.values(a).find(v => /[區区]$/.test(v));
+  const ward = Object.values(a).find(v => typeof v === 'string' && /[區区]$/.test(v));
   let district = ward || a.suburb || a.city_district || a.district || a.borough || a.town || a.village || a.neighbourhood || '';
   // 日本：city 其實是「區」(港区)，上一層才是都道府縣
   if (a.state && a.city && /[区區]$/.test(a.city) && a.state !== a.city) { district = a.city; city = a.state; }
   if (!district && a.county && a.county !== city) district = a.county;
   if (district === city) district = '';
-  return { city: city || '未分類', district: district || '未分類' };
+  return { city: city || '未分類', district: district || '未分類', country: a.country || '' };
 }
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
+  // 只查國家與區域（不經過 Google）：/api/resolve?lat=..&lng=..
+  if (req.query && req.query.lat && req.query.lng) {
+    const la = Number(req.query.lat), ln = Number(req.query.lng);
+    if (!isFinite(la) || !isFinite(ln)) return res.status(400).json({ error: '座標格式不正確' });
+    try { const ar = await area(la, ln); return res.status(200).json({ lat: la, lng: ln, ...ar }); }
+    catch (e) { return res.status(500).json({ error: '查詢失敗：' + e.message }); }
+  }
   const raw = String((req.query && req.query.url) || '');
   const u = raw.match(/https?:\/\/[^\s]+/);
   if (!u) return res.status(400).json({ error: '找不到連結，請貼上 Google Map 的分享連結' });
@@ -71,8 +78,8 @@ module.exports = async (req, res) => {
     const html = await r.text();
     const c = fromUrl(finalUrl) || fromHtml(html);
     if (!c) return res.status(422).json({ error: '這個連結解析不出座標，請換用「分享」→「複製連結」再試一次' });
-    const [name, ar] = await Promise.all([Promise.resolve(nameFrom(finalUrl, html)), area(c.lat, c.lng).catch(() => ({ city: '未分類', district: '未分類' }))]);
-    res.status(200).json({ name: name || '未命名地點', lat: c.lat, lng: c.lng, city: ar.city, district: ar.district, url: finalUrl });
+    const [name, ar] = await Promise.all([Promise.resolve(nameFrom(finalUrl, html)), area(c.lat, c.lng).catch(() => ({ city: '未分類', district: '未分類', country: '' }))]);
+    res.status(200).json({ name: name || '未命名地點', lat: c.lat, lng: c.lng, city: ar.city, district: ar.district, country: ar.country || '', url: finalUrl });
   } catch (e) {
     res.status(500).json({ error: '解析失敗：' + e.message });
   }
