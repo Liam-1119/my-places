@@ -91,6 +91,9 @@ h3{font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 0}
 .chips button.on{background:var(--ink);color:var(--bg)}
 h2 small{color:var(--mut);font-weight:400;font-size:13px;margin-left:6px}
 .modal select{display:block;width:100%;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;padding:10px}
+.modal label.ck{display:flex;align-items:center;gap:10px;margin:0;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--ink)}
+.modal .ck input{display:inline-block;width:18px;height:18px;margin:0;padding:0;flex:none;border:0}
+.ck .mut{margin-left:auto}
 </style>
 </head>
 <body>
@@ -111,10 +114,11 @@ h2 small{color:var(--mut);font-weight:400;font-size:13px;margin-left:6px}
   <label>名稱<input id="e_name"></label>
   <label>備註<textarea id="e_note" rows="3" placeholder="例如：牛排店，適合約會"></textarea></label>
   <div class="two"><label>城市<input id="e_city"></label><label>區<input id="e_district"></label></div>
-  <label>區域分類<select id="e_region"></select></label>
+  <label>國家<input id="e_country" list="dl_country" placeholder="例如：台灣、日本"></label><datalist id="dl_country"></datalist>
   <div class="acts"><button class="pbtn ghost" id="e_cancel">取消</button><button class="pbtn" id="e_save">儲存</button></div>
 </div></div>
 <div class="modal" id="lm"></div>
+<div class="modal" id="xm"></div>
 <div class="login show" id="login">
   <h1>我的地點</h1>
   <p id="lgWait">載入中…</p>
@@ -172,29 +176,39 @@ addEventListener('resize',function(){calcH();snap(idx)});
  g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
 })();
 
-/* 篩選與分區 */
-var kw='',regionF='',cityF='';
-var REG=[['tn','台灣北部'],['tc','台灣中部'],['ts','台灣南部'],['te','台灣東部'],['ti','台灣離島'],['jp','日本'],['kr','韓國'],['ov','國外'],['un','未分類']];
-var TW=[['基隆','tn'],['keelung','tn'],['台北','tn'],['new taipei','tn'],['新北','tn'],['taipei','tn'],['桃園','tn'],['taoyuan','tn'],['新竹','tn'],['hsinchu','tn'],['宜蘭','tn'],['yilan','tn'],
- ['苗栗','tc'],['miaoli','tc'],['台中','tc'],['taichung','tc'],['彰化','tc'],['changhua','tc'],['南投','tc'],['nantou','tc'],['雲林','tc'],['yunlin','tc'],
- ['嘉義','ts'],['chiayi','ts'],['台南','ts'],['tainan','ts'],['高雄','ts'],['kaohsiung','ts'],['屏東','ts'],['pingtung','ts'],
- ['花蓮','te'],['hualien','te'],['台東','te'],['taitung','te'],
- ['澎湖','ti'],['penghu','ti'],['金門','ti'],['kinmen','ti'],['連江','ti'],['lienchiang','ti'],['馬祖','ti']];
+/* 篩選與分類：台灣以縣市為單位，國外以國家為單位 */
+var kw='',countryF='',cityF='';
+var TW=[[0,'基隆','keelung'],[2,'新北','new taipei'],[1,'台北','taipei'],[3,'桃園','taoyuan'],[4,'新竹','hsinchu'],[5,'宜蘭','yilan'],
+ [6,'苗栗','miaoli'],[7,'台中','taichung'],[8,'彰化','changhua'],[9,'南投','nantou'],[10,'雲林','yunlin'],
+ [11,'嘉義','chiayi'],[12,'台南','tainan'],[13,'高雄','kaohsiung'],[14,'屏東','pingtung'],
+ [15,'花蓮','hualien'],[16,'台東','taitung'],[17,'澎湖','penghu'],[18,'金門','kinmen'],[19,'連江','lienchiang'],[19,'馬祖','matsu']];
 var JP=/日本|japan|東京|tokyo|大阪|osaka|京都|kyoto|北海道|hokkaido|福岡|fukuoka|沖繩|沖縄|okinawa|名古屋|nagoya|愛知|aichi|神奈川|kanagawa|橫濱|横浜|yokohama|神戶|兵庫|hyogo|奈良|nara|廣島|広島|hiroshima|札幌|sapporo|仙台|宮城|千葉|埼玉|靜岡|静岡|長野|石川|金澤|岐阜|新潟|熊本|鹿兒島|長崎|岡山|香川|愛媛|高知|德島|山口|佐賀|大分|宮崎|三重|滋賀|和歌山|群馬|栃木|茨城|福島|山形|秋田|岩手|青森|福井|山梨|富山|[都道府県]$/i;
 var KR=/韓國|韓国|南韓|korea|首爾|서울|seoul|釜山|부산|busan|仁川|incheon|大邱|daegu|大田|daejeon|光州|gwangju|蔚山|世宗|京畿|gyeonggi|濟州|제주|jeju|江原|忠清|全羅|慶尚/i;
-function twRank(p){var s=(p.city||'').replace(/臺/g,'台').toLowerCase();for(var i=0;i<TW.length;i++)if(s.indexOf(TW[i][0])>=0)return i;return 999}
-function autoRegion(p){
+var CN={'臺灣':'台灣','台灣':'台灣','taiwan':'台灣','中華民國':'台灣','日本':'日本','japan':'日本','大韓民國':'韓國','南韓':'韓國','韓國':'韓國','south korea':'韓國','korea':'韓國','republic of korea':'韓國',
+ '中華人民共和國':'中國','中国':'中國','中國':'中國','china':'中國','香港':'香港','hong kong':'香港','澳門':'澳門','macau':'澳門','新加坡':'新加坡','singapore':'新加坡','泰國':'泰國','thailand':'泰國',
+ '美國':'美國','美利堅合眾國':'美國','united states':'美國','英國':'英國','united kingdom':'英國','法國':'法國','france':'法國','德國':'德國','germany':'德國','義大利':'義大利','italy':'義大利',
+ '西班牙':'西班牙','spain':'西班牙','越南':'越南','vietnam':'越南','馬來西亞':'馬來西亞','malaysia':'馬來西亞','印度尼西亞':'印尼','印尼':'印尼','indonesia':'印尼','菲律賓':'菲律賓','philippines':'菲律賓',
+ '澳大利亞':'澳洲','澳洲':'澳洲','australia':'澳洲','加拿大':'加拿大','canada':'加拿大'};
+function normCountry(c){c=String(c||'').trim();return CN[c.toLowerCase()]||c}
+function twRank(p){var s=(p.city||'').replace(/臺/g,'台').toLowerCase();for(var i=0;i<TW.length;i++)for(var k=1;k<TW[i].length;k++)if(s.indexOf(TW[i][k])>=0)return TW[i][0];return 999}
+function countryOf(p){
+ if(p.country&&String(p.country).trim())return normCountry(p.country);
  var c=p.city||'';
- if(!c||c==='未分類')return 'un';
- var s=c.replace(/臺/g,'台').toLowerCase();
- for(var i=0;i<TW.length;i++)if(s.indexOf(TW[i][0])>=0)return TW[i][1];
+ if(!c||c==='未分類')return '未知國家';
+ if(twRank(p)<999)return '台灣';
  var s2=(c+' '+(p.district||'')).toLowerCase();
- if(JP.test(s2))return 'jp';
- if(KR.test(s2))return 'kr';
- return 'ov';
+ if(JP.test(s2))return '日本';
+ if(KR.test(s2))return '韓國';
+ return '未知國家';
 }
-function regionOf(p){var r=p.region;return r&&REG.some(function(x){return x[0]===r})?r:autoRegion(p)}
-function regionLabel(k){var r=REG.filter(function(x){return x[0]===k})[0];return r?r[1]:''}
+function isDomestic(p){return countryOf(p)==='台灣'}
+function groupKey(p){return isDomestic(p)?(p.city&&p.city!=='未分類'?p.city:'未分類'):countryOf(p)}
+function cOrder(c){return c==='台灣'?0:c==='日本'?1:c==='韓國'?2:c==='未知國家'?99:10}
+function gOrder(p){return isDomestic(p)?twRank(p):1000+cOrder(countryOf(p))}
+function countryList(){
+ var m={};places.forEach(function(p){m[countryOf(p)]=1});
+ return Object.keys(m).sort(function(a,b){return cOrder(a)-cOrder(b)||a.localeCompare(b,'zh-Hant')});
+}
 function units(q){
  var u=[];(q||'').toLowerCase().split(/\s+/).forEach(function(t){
   if(!t)return;
@@ -203,13 +217,13 @@ function units(q){
  });return u;
 }
 function score(p,u){
- var h=(p.name+' '+(p.note||'')+' '+p.city+' '+p.district+' '+regionLabel(regionOf(p))).toLowerCase(),s=0;
+ var h=(p.name+' '+(p.note||'')+' '+p.city+' '+p.district+' '+countryOf(p)).toLowerCase(),s=0;
  u.forEach(function(x){if(h.indexOf(x)>=0)s++});return s;
 }
 function visible(){
  var u=units(kw);
  return places.filter(function(p){
-  if(regionF&&regionOf(p)!==regionF)return false;
+  if(countryF&&countryOf(p)!==countryF)return false;
   if(cityF&&p.city!==cityF)return false;
   return !u.length||score(p,u)>0;
  });
@@ -266,31 +280,34 @@ function dbHtml(V){
  if(u.length){
   return h+'<h3 class="sec">搜尋結果<small>'+V.length+'</small></h3>'+V.map(function(p){return{p:p,s:score(p,u)}}).sort(function(a,b){return b.s-a.s||a.p.name.localeCompare(b.p.name,'zh-Hant')}).map(function(x){return dbRow(x.p,true)}).join('');
  }
- var g={};V.forEach(function(p){var r=regionOf(p);(g[r]=g[r]||[]).push(p)});
- REG.forEach(function(r){
-  var l=g[r[0]];if(!l)return;
-  h+='<h2>'+r[1]+'<small>'+l.length+'</small></h2>';
-  var k={};l.forEach(function(p){var key=p.city+'\u0001'+p.district;(k[key]=k[key]||[]).push(p)});
-  Object.keys(k).sort(function(a,b){var pa=k[a][0],pb=k[b][0];return twRank(pa)-twRank(pb)||pa.city.localeCompare(pb.city,'zh-Hant')||pa.district.localeCompare(pb.district,'zh-Hant')}).forEach(function(key){
-   var pp=k[key],t=pp[0].city===pp[0].district?pp[0].city:pp[0].city+' '+pp[0].district;
-   h+='<h3>'+esc(t)+'　'+pp.length+'</h3>'+pp.map(function(p){return dbRow(p,false)}).join('');
+ var g={};V.forEach(function(p){var k=groupKey(p);(g[k]=g[k]||[]).push(p)});
+ Object.keys(g).sort(function(a,b){return gOrder(g[a][0])-gOrder(g[b][0])||a.localeCompare(b,'zh-Hant')}).forEach(function(k){
+  var l=g[k],d={};
+  h+='<h2>'+esc(k)+'<small>'+l.length+'</small></h2>';
+  l.forEach(function(p){
+   var parts=isDomestic(p)?[p.district]:[p.city,p.district],seen=[];
+   parts.forEach(function(x){if(x&&x!=='未分類'&&seen.indexOf(x)<0)seen.push(x)});
+   var sub=seen.join(' ')||'其他';(d[sub]=d[sub]||[]).push(p);
+  });
+  Object.keys(d).sort(function(a,b){return a.localeCompare(b,'zh-Hant')}).forEach(function(sub){
+   h+='<h3>'+esc(sub)+'　'+d[sub].length+'</h3>'+d[sub].map(function(p){return dbRow(p,false)}).join('');
   });
  });
  return h;
 }
 function renderChips(){
  var sl=$('#chips').scrollLeft,sl2=$('#chips2').scrollLeft,cnt={},cities={};
- places.forEach(function(p){var r=regionOf(p);cnt[r]=(cnt[r]||0)+1;(cities[r]=cities[r]||{});cities[r][p.city]=(cities[r][p.city]||0)+1});
- if(regionF&&!cnt[regionF]){regionF='';cityF=''}
- var h='<button data-a="rg" data-r="" class="'+(regionF?'':'on')+'">全部</button>';
- REG.forEach(function(r){if(cnt[r[0]])h+='<button data-a="rg" data-r="'+r[0]+'" class="'+(regionF===r[0]?'on':'')+'">'+r[1]+' '+cnt[r[0]]+'</button>'});
+ places.forEach(function(p){var c=countryOf(p);cnt[c]=(cnt[c]||0)+1;(cities[c]=cities[c]||{});cities[c][p.city]=(cities[c][p.city]||0)+1});
+ if(countryF&&!cnt[countryF]){countryF='';cityF=''}
+ var h='<button data-a="rg" data-r="" class="'+(countryF?'':'on')+'">全部</button>';
+ countryList().forEach(function(c){h+='<button data-a="rg" data-r="'+esc(c)+'" class="'+(countryF===c?'on':'')+'">'+esc(c)+' '+cnt[c]+'</button>'});
  $('#chips').innerHTML=h;
  var h2='';
- if(regionF){
-  var cs=Object.keys(cities[regionF]||{});
+ if(countryF){
+  var cs=Object.keys(cities[countryF]||{});
   if(cs.length>1){
    cs.sort(function(a,b){return twRank({city:a})-twRank({city:b})||a.localeCompare(b,'zh-Hant')});
-   h2='<button data-a="ct" data-c="" class="'+(cityF?'':'on')+'">所有縣市</button>'+cs.map(function(c){return '<button data-a="ct" data-c="'+esc(c)+'" class="'+(cityF===c?'on':'')+'">'+esc(c)+' '+cities[regionF][c]+'</button>'}).join('');
+   h2='<button data-a="ct" data-c="" class="'+(cityF?'':'on')+'">所有縣市</button>'+cs.map(function(c){return '<button data-a="ct" data-c="'+esc(c)+'" class="'+(cityF===c?'on':'')+'">'+esc(c)+' '+cities[countryF][c]+'</button>'}).join('');
   }else cityF='';
  }else cityF='';
  $('#chips2').innerHTML=h2;
@@ -397,7 +414,7 @@ function doImport(l){
  var b=writeBatch(db),col=collection(db,'lists',curList,'places'),n=0;
  l.forEach(function(p){
   if(places.some(function(x){return Math.abs(x.lat-p.lat)<1e-5&&Math.abs(x.lng-p.lng)<1e-5}))return;
-  b.set(doc(col),{name:p.name,note:p.note||'',city:p.city||'未分類',district:p.district||'未分類',lat:p.lat,lng:p.lng,url:p.url||'',addedBy:user.email,createdAt:p.id||Date.now()});n++;
+  b.set(doc(col),{name:p.name,note:p.note||'',city:p.city||'未分類',district:p.district||'未分類',lat:p.lat,lng:p.lng,url:p.url||'',country:p.country||'',addedBy:user.email,createdAt:p.id||Date.now()});n++;
  });
  if(!n){say('沒有需要匯入的新地點');return}
  b.commit().then(function(){try{localStorage.setItem('imported','yes')}catch(e){}say('已匯入 '+n+' 個地點')}).catch(function(e){say('匯入失敗：'+e.message,true)});
@@ -410,7 +427,7 @@ function add(text){
  .then(function(d){
   var dup=places.filter(function(p){return Math.abs(p.lat-d.lat)<1e-5&&Math.abs(p.lng-d.lng)<1e-5})[0];
   if(dup){say('這份清單已經有了：'+dup.name);pick(dup.id);return}
-  return addDoc(collection(db,'lists',curList,'places'),{name:d.name,note:'',city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url,addedBy:user.email,createdAt:Date.now()})
+  return addDoc(collection(db,'lists',curList,'places'),{name:d.name,note:'',city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url,country:d.country||'',addedBy:user.email,createdAt:Date.now()})
   .then(function(r){$('#url').value='';focusNext=r.id;say('已加入：'+d.name+'（'+d.city+' '+d.district+'）')});
  }).catch(function(e){say(e.message,true)});
 }
@@ -427,26 +444,60 @@ $('#url').addEventListener('keydown',function(e){if(e.key==='Enter')add($('#url'
 var editId=null;
 function openEdit(id){
  var p=byId(id);if(!p)return;
- editId=id;$('#e_name').value=p.name;$('#e_note').value=p.note||'';$('#e_city').value=p.city;$('#e_district').value=p.district;$('#e_region').value=p.region||'';$('#e_region').options[0].textContent='自動判斷（'+regionLabel(autoRegion(p))+'）';
+ editId=id;$('#e_name').value=p.name;$('#e_note').value=p.note||'';$('#e_city').value=p.city;$('#e_district').value=p.district;var cc=countryOf(p);$('#e_country').value=cc==='未知國家'?'':cc;$('#dl_country').innerHTML=countryList().concat(['台灣','日本','韓國']).filter(function(x,i,a){return x!=='未知國家'&&a.indexOf(x)===i}).map(function(x){return '<option value="'+esc(x)+'">'}).join('');
  $('#modal').classList.add('show');
 }
 function closeEdit(){$('#modal').classList.remove('show');editId=null}
 function saveEdit(){
  var p=byId(editId);if(!p)return;
- var f={name:$('#e_name').value.trim()||p.name,note:$('#e_note').value.trim(),city:$('#e_city').value.trim()||p.city,district:$('#e_district').value.trim()||p.district,region:$('#e_region').value};
+ var f={name:$('#e_name').value.trim()||p.name,note:$('#e_note').value.trim(),city:$('#e_city').value.trim()||p.city,district:$('#e_district').value.trim()||p.district,country:normCountry($('#e_country').value)};
  updateDoc(doc(db,'lists',curList,'places',editId),f).then(function(){say('已儲存')}).catch(function(e){say('儲存失敗：'+e.message,true)});
  closeEdit();
 }
-$('#e_region').innerHTML='<option value="">自動判斷</option>'+REG.map(function(r){return '<option value="'+r[0]+'">'+r[1]+'</option>'}).join('');
 $('#e_cancel').onclick=closeEdit;$('#e_save').onclick=saveEdit;
 $('#modal').addEventListener('click',function(e){if(e.target.id==='modal')closeEdit()});
 function del(id){if(confirm('刪除這個地點？'))deleteDoc(doc(db,'lists',curList,'places',id)).catch(function(e){say('刪除失敗：'+e.message,true)})}
-function txt(){
- var l=places.slice().sort(function(x,y){return (x.city+x.district).localeCompare(y.city+y.district,'zh-Hant')});
+function groupsInfo(){
+ var g={},o={};
+ places.forEach(function(p){var k=groupKey(p);g[k]=(g[k]||0)+1;if(!(k in o))o[k]=gOrder(p)});
+ return Object.keys(g).sort(function(a,b){return o[a]-o[b]||a.localeCompare(b,'zh-Hant')}).map(function(k){return{k:k,n:g[k]}});
+}
+function openExport(){
+ if(!places.length){say('這份清單還沒有地點',true);return}
+ var h='<div class="card"><h2>匯出 txt</h2><label class="ck"><input type="checkbox" id="x_all" checked>全部<span class="mut">'+places.length+'</span></label>';
+ h+=groupsInfo().map(function(x){return '<label class="ck"><input type="checkbox" class="x_k" value="'+esc(x.k)+'">'+esc(x.k)+'<span class="mut">'+x.n+'</span></label>'}).join('');
+ h+='<div class="acts" style="margin-top:12px"><button class="pbtn ghost" data-a="xCancel">取消</button><button class="pbtn" data-a="xGo">匯出</button></div></div>';
+ $('#xm').innerHTML=h;$('#xm').classList.add('show');
+}
+function doExport(){
+ var all=$('#x_all').checked,sel=[].slice.call(document.querySelectorAll('.x_k:checked')).map(function(x){return x.value});
+ var l=places.filter(function(p){return all||sel.indexOf(groupKey(p))>=0});
+ if(!l.length){say('請至少選一個',true);return}
+ l.sort(function(a,b){return gOrder(a)-gOrder(b)||groupKey(a).localeCompare(groupKey(b),'zh-Hant')||(a.district||'').localeCompare(b.district||'','zh-Hant')});
  var t=l.map(function(p){return '店名:'+p.name+(p.note?'\n備註:'+p.note:'')+'\nGoogle Map:'+gm(p)}).join('\n\n')+'\n';
+ var nm=(curName()+(all?'':'-'+sel.join('-'))).slice(0,60)+'.txt';
  var u=URL.createObjectURL(new Blob(['\ufeff'+t],{type:'text/plain;charset=utf-8'})),e=document.createElement('a');
- e.href=u;e.download=curName()+'.txt';document.body.appendChild(e);e.click();e.remove();
- setTimeout(function(){URL.revokeObjectURL(u)},5000);say('已匯出 '+l.length+' 個地點');
+ e.href=u;e.download=nm;document.body.appendChild(e);e.click();e.remove();
+ setTimeout(function(){URL.revokeObjectURL(u)},5000);
+ $('#xm').classList.remove('show');say('已匯出 '+l.length+' 個地點');
+}
+$('#xm').addEventListener('click',function(e){if(e.target.id==='xm')$('#xm').classList.remove('show')});
+$('#xm').addEventListener('change',function(e){
+ var t=e.target,all=$('#x_all'),ks=[].slice.call(document.querySelectorAll('.x_k'));
+ if(t.id==='x_all'){if(t.checked)ks.forEach(function(x){x.checked=false});else if(!ks.some(function(x){return x.checked}))t.checked=true}
+ else if(t.classList.contains('x_k')){if(t.checked)all.checked=false;else if(!ks.some(function(x){return x.checked}))all.checked=true}
+});
+function fillCountry(){
+ var todo=places.filter(function(p){return !p.country&&countryOf(p)==='未知國家'});
+ if(!todo.length)return;
+ var i=0,ok=0,lid=curList;say('補齊國家資料中…');
+ (function next(){
+  if(i>=todo.length){say('已補齊 '+ok+' 筆');return}
+  var p=todo[i++];
+  fetch('/api/resolve?lat='+p.lat+'&lng='+p.lng).then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d}})})
+  .then(function(x){if(x.ok&&x.d.country){ok++;return updateDoc(doc(db,'lists',lid,'places',p.id),{country:x.d.country})}})
+  .catch(function(){}).then(function(){setTimeout(next,1200)});
+ })();
 }
 
 /* 清單與成員視窗 */
@@ -462,6 +513,8 @@ function renderListModal(){
   if(isOwner())h+='<div class="inv"><input id="inv" type="email" inputmode="email" placeholder="對方的 Google 信箱"><button class="pbtn" data-a="invite">邀請</button></div><div class="mut" style="margin-top:6px">對方用這個信箱登入，就會看到這份清單</div><div class="acts" style="justify-content:flex-start;margin-top:10px"><button class="pbtn ghost" data-a="rename">重新命名</button><button class="pbtn ghost" data-a="delList">刪除清單</button></div>';
   else h+='<div class="mut" style="margin-top:8px">只有擁有者可以邀請或移除成員</div>';
  }
+ var nc=places.filter(function(p){return !p.country&&countryOf(p)==='未知國家'}).length;
+ if(nc)h+='<button class="pbtn ghost wide" data-a="fillCountry">補齊國家資料（'+nc+'）</button>';
  var n=localPlaces().length;
  if(n)h+='<button class="pbtn ghost wide" data-a="import">匯入這支手機的舊地點（'+n+'）</button>';
  h+='<h3 class="sec">帳號</h3><div class="row"><div class="g mut">'+esc(user.email)+'</div><button class="btn" data-a="logout">登出</button></div>';
@@ -478,7 +531,10 @@ document.addEventListener('click',function(e){
  if(a==='pick')pick(id);
  else if(a==='edit')openEdit(id);
  else if(a==='del')del(id);
- else if(a==='txt')txt();
+ else if(a==='txt')openExport();
+ else if(a==='xGo')doExport();
+ else if(a==='xCancel')$('#xm').classList.remove('show');
+ else if(a==='fillCountry')fillCountry();
  else if(a==='openList'){if(!user)return;$('#lm').classList.add('show');renderListModal()}
  else if(a==='closeList')$('#lm').classList.remove('show');
  else if(a==='sw'){switchList(id);renderListModal()}
@@ -497,7 +553,7 @@ document.addEventListener('click',function(e){
   .then(function(){return deleteDoc(doc(db,'lists',lid))}).then(function(){say('已刪除清單')}).catch(function(e){say('刪除失敗：'+e.message,true)});
  }
  else if(a==='import'){var l=localPlaces();if(l.length)doImport(l)}
- else if(a==='rg'){regionF=t.dataset.r||'';cityF='';applyFilter()}
+ else if(a==='rg'){countryF=t.dataset.r||'';cityF='';applyFilter()}
  else if(a==='ct'){cityF=t.dataset.c||'';applyFilter()}
  else if(a==='logout'){$('#lm').classList.remove('show');signOut(auth)}
 });
