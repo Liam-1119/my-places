@@ -82,6 +82,15 @@ h3{font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 0}
 .login p{color:var(--mut);margin:0 0 24px;max-width:300px}
 .login .pbtn{padding:12px 24px;font-size:16px}
 #lgMsg{color:var(--err);font-size:13px;margin-top:14px;max-width:300px}
+.flt{position:sticky;top:0;z-index:2;background:var(--bg);padding:0 0 8px}
+.flt input{display:block;width:100%;border:0;border-radius:10px;background:var(--chip);color:var(--ink);font:inherit;font-size:16px;padding:9px 12px}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips:empty{display:none}
+.chips button{flex:none;border:0;border-radius:999px;background:var(--chip);color:var(--ink);padding:5px 12px;font:inherit;font-size:13px}
+.chips button.on{background:var(--ink);color:var(--bg)}
+h2 small{color:var(--mut);font-weight:400;font-size:13px;margin-left:6px}
+.modal select{display:block;width:100%;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:16px;padding:10px}
 </style>
 </head>
 <body>
@@ -95,13 +104,14 @@ h3{font-size:13px;font-weight:600;color:var(--mut);margin:12px 0 0}
   <button class="fab" id="loc" aria-label="我的位置">◎</button>
   <div class="grab" id="grab"><i></i></div>
   <div class="seg" id="seg"></div>
-  <div class="body" id="body"></div>
+  <div class="body" id="body"><div class="flt"><input id="q" type="search" placeholder="搜尋店名、備註、地區（符合任一個字就顯示）" autocomplete="off"><div class="chips" id="chips"></div><div class="chips" id="chips2"></div></div><div id="lst"></div></div>
 </div>
 <div class="modal" id="modal"><div class="card">
   <h2>編輯地點</h2>
   <label>名稱<input id="e_name"></label>
   <label>備註<textarea id="e_note" rows="3" placeholder="例如：牛排店，適合約會"></textarea></label>
   <div class="two"><label>城市<input id="e_city"></label><label>區<input id="e_district"></label></div>
+  <label>區域分類<select id="e_region"></select></label>
   <div class="acts"><button class="pbtn ghost" id="e_cancel">取消</button><button class="pbtn" id="e_save">儲存</button></div>
 </div></div>
 <div class="modal" id="lm"></div>
@@ -162,8 +172,51 @@ addEventListener('resize',function(){calcH();snap(idx)});
  g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
 })();
 
+/* 篩選與分區 */
+var kw='',regionF='',cityF='';
+var REG=[['tn','台灣北部'],['tc','台灣中部'],['ts','台灣南部'],['te','台灣東部'],['ti','台灣離島'],['jp','日本'],['kr','韓國'],['ov','國外'],['un','未分類']];
+var TW=[['基隆','tn'],['keelung','tn'],['台北','tn'],['new taipei','tn'],['新北','tn'],['taipei','tn'],['桃園','tn'],['taoyuan','tn'],['新竹','tn'],['hsinchu','tn'],['宜蘭','tn'],['yilan','tn'],
+ ['苗栗','tc'],['miaoli','tc'],['台中','tc'],['taichung','tc'],['彰化','tc'],['changhua','tc'],['南投','tc'],['nantou','tc'],['雲林','tc'],['yunlin','tc'],
+ ['嘉義','ts'],['chiayi','ts'],['台南','ts'],['tainan','ts'],['高雄','ts'],['kaohsiung','ts'],['屏東','ts'],['pingtung','ts'],
+ ['花蓮','te'],['hualien','te'],['台東','te'],['taitung','te'],
+ ['澎湖','ti'],['penghu','ti'],['金門','ti'],['kinmen','ti'],['連江','ti'],['lienchiang','ti'],['馬祖','ti']];
+var JP=/日本|japan|東京|tokyo|大阪|osaka|京都|kyoto|北海道|hokkaido|福岡|fukuoka|沖繩|沖縄|okinawa|名古屋|nagoya|愛知|aichi|神奈川|kanagawa|橫濱|横浜|yokohama|神戶|兵庫|hyogo|奈良|nara|廣島|広島|hiroshima|札幌|sapporo|仙台|宮城|千葉|埼玉|靜岡|静岡|長野|石川|金澤|岐阜|新潟|熊本|鹿兒島|長崎|岡山|香川|愛媛|高知|德島|山口|佐賀|大分|宮崎|三重|滋賀|和歌山|群馬|栃木|茨城|福島|山形|秋田|岩手|青森|福井|山梨|富山|[都道府県]$/i;
+var KR=/韓國|韓国|南韓|korea|首爾|서울|seoul|釜山|부산|busan|仁川|incheon|大邱|daegu|大田|daejeon|光州|gwangju|蔚山|世宗|京畿|gyeonggi|濟州|제주|jeju|江原|忠清|全羅|慶尚/i;
+function twRank(p){var s=(p.city||'').replace(/臺/g,'台').toLowerCase();for(var i=0;i<TW.length;i++)if(s.indexOf(TW[i][0])>=0)return i;return 999}
+function autoRegion(p){
+ var c=p.city||'';
+ if(!c||c==='未分類')return 'un';
+ var s=c.replace(/臺/g,'台').toLowerCase();
+ for(var i=0;i<TW.length;i++)if(s.indexOf(TW[i][0])>=0)return TW[i][1];
+ var s2=(c+' '+(p.district||'')).toLowerCase();
+ if(JP.test(s2))return 'jp';
+ if(KR.test(s2))return 'kr';
+ return 'ov';
+}
+function regionOf(p){var r=p.region;return r&&REG.some(function(x){return x[0]===r})?r:autoRegion(p)}
+function regionLabel(k){var r=REG.filter(function(x){return x[0]===k})[0];return r?r[1]:''}
+function units(q){
+ var u=[];(q||'').toLowerCase().split(/\s+/).forEach(function(t){
+  if(!t)return;
+  if(/^[\x00-\x7f]+$/.test(t)){if(u.indexOf(t)<0)u.push(t)}
+  else Array.from(t).forEach(function(c){if(u.indexOf(c)<0)u.push(c)});
+ });return u;
+}
+function score(p,u){
+ var h=(p.name+' '+(p.note||'')+' '+p.city+' '+p.district+' '+regionLabel(regionOf(p))).toLowerCase(),s=0;
+ u.forEach(function(x){if(h.indexOf(x)>=0)s++});return s;
+}
+function visible(){
+ var u=units(kw);
+ return places.filter(function(p){
+  if(regionF&&regionOf(p)!==regionF)return false;
+  if(cityF&&p.city!==cityF)return false;
+  return !u.length||score(p,u)>0;
+ });
+}
+
 /* 資料分組 */
-function ranked(){return me?places.map(function(p){return{p:p,d:dist(me,p)}}).sort(function(a,b){return a.d-b.d}):[]}
+function ranked(){return me?visible().map(function(p){return{p:p,d:dist(me,p)}}).sort(function(a,b){return a.d-b.d}):[]}
 function groups(){var r=ranked();return{
  near:r.filter(function(x){return x.d<=NEAR}),
  far:r.filter(function(x){return x.d>NEAR&&x.d<=FAR}),
@@ -172,7 +225,7 @@ function groups(){var r=ranked();return{
 /* 畫面 */
 function renderMarkers(){
  layer.clearLayers();markers={};
- places.forEach(function(p){
+ visible().forEach(function(p){
   var m=L.marker([p.lat,p.lng],{icon:p.id===sel?iconSel:icon}).addTo(layer);
   m.bindPopup('<b>'+esc(p.name)+'</b><br><span class="mut">'+esc(p.city)+' '+esc(p.district)+'</span>'+(p.note?'<br>'+esc(p.note):'')+'<br><a href="'+esc(gm(p))+'" target="_blank" rel="noopener">在 Google Map 開啟</a>　<a href="#" data-a="edit" data-id="'+esc(p.id)+'">編輯</a>');
   m.on('click',function(){pick(p.id,true)});
@@ -197,27 +250,66 @@ function sec(title,list,empty){
 }
 function nearHtml(){
  if(!places.length)return '<div class="empty">這份清單還沒有地點。到 Google 地圖按「分享」，複製連結貼到上方即可。</div>';
+ if(!visible().length)return '<div class="empty">沒有符合篩選的地點</div>';
  if(!me)return '<div class="empty">定位中，請允許瀏覽器使用位置。</div>';
  var G=groups();
  return sec('20 公里內',G.near,'這個範圍沒有地點')+sec('20 到 50 公里',G.far,'這個範圍沒有地點')+(G.out?'<div class="note">另有 '+G.out+' 個地點在 50 公里外，請到「全部」查看</div>':'');
 }
-function dbHtml(){
+function dbRow(p,area){
+ return '<div class="row"><div class="g" data-a="pick" data-id="'+esc(p.id)+'"><b>'+esc(p.name)+'</b>'+(area?'<span class="mut">'+esc(p.city)+' '+esc(p.district)+'</span>':'')+noteHtml(p)+'</div><a class="go" href="'+esc(gm(p))+'" target="_blank" rel="noopener">開啟</a><button class="btn" data-a="edit" data-id="'+esc(p.id)+'">編輯</button><button class="btn" data-a="del" data-id="'+esc(p.id)+'">刪除</button></div>';
+}
+function dbHtml(V){
  if(!places.length)return '<div class="empty">這份清單還沒有地點。</div>';
- var g={},h='<div style="padding:8px 0 0"><button class="btn" style="color:var(--acc);font-size:14px;font-weight:600" data-a="txt">匯出 txt</button></div>';
- places.forEach(function(p){(g[p.city]=g[p.city]||{});(g[p.city][p.district]=g[p.city][p.district]||[]).push(p)});
- Object.keys(g).forEach(function(c){h+='<h2>'+esc(c)+'</h2>';
-  Object.keys(g[c]).forEach(function(d){h+='<h3>'+esc(d)+'　'+g[c][d].length+'</h3>';
-   g[c][d].forEach(function(p){h+='<div class="row"><div class="g" data-a="pick" data-id="'+esc(p.id)+'"><b>'+esc(p.name)+'</b>'+noteHtml(p)+'</div><a class="go" href="'+esc(gm(p))+'" target="_blank" rel="noopener">開啟</a><button class="btn" data-a="edit" data-id="'+esc(p.id)+'">編輯</button><button class="btn" data-a="del" data-id="'+esc(p.id)+'">刪除</button></div>'})})});
+ var h='<div style="padding:4px 0 0"><button class="btn" style="color:var(--acc);font-size:14px;font-weight:600" data-a="txt">匯出 txt</button></div>';
+ if(!V.length)return h+'<div class="empty">沒有符合篩選的地點</div>';
+ var u=units(kw);
+ if(u.length){
+  return h+'<h3 class="sec">搜尋結果<small>'+V.length+'</small></h3>'+V.map(function(p){return{p:p,s:score(p,u)}}).sort(function(a,b){return b.s-a.s||a.p.name.localeCompare(b.p.name,'zh-Hant')}).map(function(x){return dbRow(x.p,true)}).join('');
+ }
+ var g={};V.forEach(function(p){var r=regionOf(p);(g[r]=g[r]||[]).push(p)});
+ REG.forEach(function(r){
+  var l=g[r[0]];if(!l)return;
+  h+='<h2>'+r[1]+'<small>'+l.length+'</small></h2>';
+  var k={};l.forEach(function(p){var key=p.city+'\u0001'+p.district;(k[key]=k[key]||[]).push(p)});
+  Object.keys(k).sort(function(a,b){var pa=k[a][0],pb=k[b][0];return twRank(pa)-twRank(pb)||pa.city.localeCompare(pb.city,'zh-Hant')||pa.district.localeCompare(pb.district,'zh-Hant')}).forEach(function(key){
+   var pp=k[key],t=pp[0].city===pp[0].district?pp[0].city:pp[0].city+' '+pp[0].district;
+   h+='<h3>'+esc(t)+'　'+pp.length+'</h3>'+pp.map(function(p){return dbRow(p,false)}).join('');
+  });
+ });
  return h;
 }
+function renderChips(){
+ var sl=$('#chips').scrollLeft,sl2=$('#chips2').scrollLeft,cnt={},cities={};
+ places.forEach(function(p){var r=regionOf(p);cnt[r]=(cnt[r]||0)+1;(cities[r]=cities[r]||{});cities[r][p.city]=(cities[r][p.city]||0)+1});
+ if(regionF&&!cnt[regionF]){regionF='';cityF=''}
+ var h='<button data-a="rg" data-r="" class="'+(regionF?'':'on')+'">全部</button>';
+ REG.forEach(function(r){if(cnt[r[0]])h+='<button data-a="rg" data-r="'+r[0]+'" class="'+(regionF===r[0]?'on':'')+'">'+r[1]+' '+cnt[r[0]]+'</button>'});
+ $('#chips').innerHTML=h;
+ var h2='';
+ if(regionF){
+  var cs=Object.keys(cities[regionF]||{});
+  if(cs.length>1){
+   cs.sort(function(a,b){return twRank({city:a})-twRank({city:b})||a.localeCompare(b,'zh-Hant')});
+   h2='<button data-a="ct" data-c="" class="'+(cityF?'':'on')+'">所有縣市</button>'+cs.map(function(c){return '<button data-a="ct" data-c="'+esc(c)+'" class="'+(cityF===c?'on':'')+'">'+esc(c)+' '+cities[regionF][c]+'</button>'}).join('');
+  }else cityF='';
+ }else cityF='';
+ $('#chips2').innerHTML=h2;
+ $('#chips').scrollLeft=sl;$('#chips2').scrollLeft=sl2;
+}
 function renderSheet(){
- var G=groups(),b=$('#body'),top=b.scrollTop;
- $('#seg').innerHTML=[['near','附近',G.near.length+G.far.length],['db','全部',places.length]].map(function(t){
+ var G=groups(),b=$('#body'),top=b.scrollTop,V=visible();
+ renderChips();
+ $('#seg').innerHTML=[['near','附近',G.near.length+G.far.length],['db','全部',V.length]].map(function(t){
   return '<button data-t="'+t[0]+'" class="'+(tab===t[0]?'on':'')+'">'+t[1]+'<small>'+t[2]+'</small></button>'}).join('');
  document.querySelectorAll('#seg button').forEach(function(x){x.onclick=function(){setTab(x.dataset.t)}});
- b.innerHTML=tab==='near'?nearHtml():dbHtml();
+ $('#lst').innerHTML=tab==='near'?nearHtml():dbHtml(V);
  b.scrollTop=top;
 }
+function fitVisible(){
+ var l=visible().map(function(p){return[p.lat,p.lng]});
+ if(l.length)map.fitBounds(L.latLngBounds(l),{paddingTopLeft:[30,100],paddingBottomRight:[30,H[idx]+30],maxZoom:16,animate:false});
+}
+function applyFilter(){renderMarkers();renderSheet();fitVisible()}
 function renderTop(){var l=curL();$('#chip').textContent=(l?l.name+((l.members||[]).length>1?'（'+l.members.length+' 人）':''):'清單')+' ▾'}
 function render(){renderMarkers();renderSheet()}
 function fitAll(){var l=places.map(function(p){return[p.lat,p.lng]});if(l.length)map.fitBounds(L.latLngBounds(l),{padding:[40,40],maxZoom:15,animate:false})}
@@ -335,16 +427,17 @@ $('#url').addEventListener('keydown',function(e){if(e.key==='Enter')add($('#url'
 var editId=null;
 function openEdit(id){
  var p=byId(id);if(!p)return;
- editId=id;$('#e_name').value=p.name;$('#e_note').value=p.note||'';$('#e_city').value=p.city;$('#e_district').value=p.district;
+ editId=id;$('#e_name').value=p.name;$('#e_note').value=p.note||'';$('#e_city').value=p.city;$('#e_district').value=p.district;$('#e_region').value=p.region||'';$('#e_region').options[0].textContent='自動判斷（'+regionLabel(autoRegion(p))+'）';
  $('#modal').classList.add('show');
 }
 function closeEdit(){$('#modal').classList.remove('show');editId=null}
 function saveEdit(){
  var p=byId(editId);if(!p)return;
- var f={name:$('#e_name').value.trim()||p.name,note:$('#e_note').value.trim(),city:$('#e_city').value.trim()||p.city,district:$('#e_district').value.trim()||p.district};
+ var f={name:$('#e_name').value.trim()||p.name,note:$('#e_note').value.trim(),city:$('#e_city').value.trim()||p.city,district:$('#e_district').value.trim()||p.district,region:$('#e_region').value};
  updateDoc(doc(db,'lists',curList,'places',editId),f).then(function(){say('已儲存')}).catch(function(e){say('儲存失敗：'+e.message,true)});
  closeEdit();
 }
+$('#e_region').innerHTML='<option value="">自動判斷</option>'+REG.map(function(r){return '<option value="'+r[0]+'">'+r[1]+'</option>'}).join('');
 $('#e_cancel').onclick=closeEdit;$('#e_save').onclick=saveEdit;
 $('#modal').addEventListener('click',function(e){if(e.target.id==='modal')closeEdit()});
 function del(id){if(confirm('刪除這個地點？'))deleteDoc(doc(db,'lists',curList,'places',id)).catch(function(e){say('刪除失敗：'+e.message,true)})}
@@ -404,6 +497,8 @@ document.addEventListener('click',function(e){
   .then(function(){return deleteDoc(doc(db,'lists',lid))}).then(function(){say('已刪除清單')}).catch(function(e){say('刪除失敗：'+e.message,true)});
  }
  else if(a==='import'){var l=localPlaces();if(l.length)doImport(l)}
+ else if(a==='rg'){regionF=t.dataset.r||'';cityF='';applyFilter()}
+ else if(a==='ct'){cityF=t.dataset.c||'';applyFilter()}
  else if(a==='logout'){$('#lm').classList.remove('show');signOut(auth)}
 });
 
@@ -444,6 +539,9 @@ function locate(){
 }
 $('#loc').onclick=function(){if(me){map.setView([me.lat,me.lng],15,{animate:false});map.panBy([0,H[idx]/2],{animate:false})}else locate()};
 
+var qT=0;
+$('#q').addEventListener('input',function(){kw=this.value;clearTimeout(qT);qT=setTimeout(applyFilter,250)});
+$('#q').addEventListener('focus',function(){if(idx===0)snap(1)});
 render();renderTop();locate();
 var q=new URLSearchParams(location.search),sh=q.get('url')||q.get('text')||'';
 if(sh){history.replaceState(null,'','/');pending=sh}
