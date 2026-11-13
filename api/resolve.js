@@ -87,7 +87,7 @@ async function area(lat, lng) {
 
 // 用地址查座標（Google 網頁抓不到座標時的備案）。找不到門牌時退而求其次用街道，並標示為約略位置
 async function geocodeAddr(addr, cc) {
-  const noLi = addr.replace(/[\u4e00-\u9fff]{1,3}[里村]/, '');
+  const noLi = addr.replace(/(?<=[區鄉鎮市])[\u4e00-\u9fff]{1,3}[里村]/, '');
   const street = noLi.replace(/\d+(?:之\d+)?號.*$/, '').replace(/[,，\s]+$/, '');
   const tries = [[addr, false]];
   if (noLi !== addr) tries.push([noLi, false]);
@@ -104,6 +104,34 @@ async function geocodeAddr(addr, cc) {
     } catch (e) {}
   }
   return null;
+}
+
+// Google 官方 Places API (New) 文字搜尋：用「店名 + 地址」找出準確座標。金鑰放在 Vercel 環境變數 GOOGLE_PLACES_KEY
+async function googleFind(name, addr, tw) {
+  const key = process.env.GOOGLE_PLACES_KEY;
+  if (!key) return { err: '尚未設定 GOOGLE_PLACES_KEY' };
+  const q = addr && name && name !== addr ? name + ' ' + addr : (addr || name);
+  if (!q) return { err: '沒有可查詢的名稱' };
+  try {
+    const r = await fetch('https://places.googleapis.com/v1/places:searchText', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': key,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location'
+      },
+      body: JSON.stringify(Object.assign({ textQuery: q, languageCode: 'zh-TW', pageSize: 1 }, tw ? { regionCode: 'TW' } : {})),
+      signal: AbortSignal.timeout(8000)
+    });
+    const j = await r.json();
+    if (!r.ok) return { err: 'Google 查詢失敗：' + ((j.error && j.error.message) || r.status) };
+    const p = j.places && j.places[0];
+    if (!p || !p.location) return { err: 'Google 沒有找到這個地點' };
+    if (tw && !/[臺台]灣|taiwan/i.test(p.formattedAddress || '')) return { err: 'Google 找到的地點不在台灣' };
+    return { lat: p.location.latitude, lng: p.location.longitude, approx: !addr };
+  } catch (e) {
+    return { err: 'Google 查詢失敗：' + e.message };
+  }
 }
 
 module.exports = async (req, res) => {
@@ -140,21 +168,24 @@ module.exports = async (req, res) => {
     cands.push(...candidatesFromHtml(html));
     let c = cands.find(x => !suspicious(x)) || null;
     let ar = c ? await area(c.lat, c.lng).catch(() => null) : null;
-    let approx = false;
+    let approx = false, via = 'link', dbg = '';
 
-    // 沒有可靠座標，或名稱是台灣地址但座標卻落在海外：改用地址查座標
+    // 沒有可靠座標，或名稱是台灣地址但座標卻落在海外：先問 Google，再退回免費地址查詢
     const wrongPlace = c && tw && ar && !/[臺台]灣|taiwan/i.test(ar.country);
     if (!c || wrongPlace) {
-      const g = sp.addr ? await geocodeAddr(sp.addr, tw ? 'tw' : '') : null;
+      let g = null;
+      const gr = await googleFind(name, sp.addr, tw);
+      if (gr.lat !== undefined) { g = gr; via = 'google'; } else dbg = gr.err;
+      if (!g && sp.addr) { g = await geocodeAddr(sp.addr, tw ? 'tw' : ''); if (g) via = 'osm'; }
       if (g) { c = g; approx = !!g.approx; ar = await area(g.lat, g.lng).catch(() => null); }
       else c = null;
     }
     // 還是沒有：把名稱和連結交還給網頁，讓使用者在地圖上點選位置
-    if (!c) return res.status(422).json({ error: '找不到這個地點的座標', name: name || '未命名地點', url: finalUrl });
+    if (!c) return res.status(422).json({ error: '找不到這個地點的座標', name: name || '未命名地點', url: finalUrl, debug: dbg });
     if (!ar) ar = { city: '未分類', district: '未分類', country: '' };
-    res.status(200).json({ name: name || '未命名地點', lat: c.lat, lng: c.lng, city: ar.city, district: ar.district, country: ar.country || '', approx, url: finalUrl });
+    res.status(200).json({ name: name || '未命名地點', lat: c.lat, lng: c.lng, city: ar.city, district: ar.district, country: ar.country || '', approx, via, url: finalUrl });
   } catch (e) {
     res.status(500).json({ error: '解析失敗：' + e.message });
   }
 };
-module.exports._t = { fromUrl, candidatesFromHtml, suspicious, nameFrom, nameSaysTW, clean, splitName };
+module.exports._t = { googleFind, fromUrl, candidatesFromHtml, suspicious, nameFrom, nameSaysTW, clean, splitName };
