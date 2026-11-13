@@ -445,7 +445,7 @@ function add(text){
 var pinInfo=null;
 function startPin(d){
  pinInfo=d;snap(0);
- $('#pinName').textContent='找不到「'+d.name+'」的座標。請移動地圖，讓紅色十字對準它的位置，再按確認。';
+ $('#pinName').textContent='找不到「'+d.name+'」的座標。請移動地圖，讓紅色十字對準它的位置，再按確認。'+(d.debug?'（'+d.debug+'）':'');
  $('#pinbar').classList.add('show');$('#cross').classList.add('show');
  if(me&&!fitted)map.setView([me.lat,me.lng],16,{animate:false});
  say('');
