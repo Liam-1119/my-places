@@ -127,7 +127,9 @@ async function googleFind(name, addr, tw) {
     if (!r.ok) return { err: 'Google 查詢失敗：' + ((j.error && j.error.message) || r.status) };
     const p = j.places && j.places[0];
     if (!p || !p.location) return { err: 'Google 沒有找到這個地點' };
-    if (tw && !/[臺台]灣|taiwan/i.test(p.formattedAddress || '')) return { err: 'Google 找到的地點不在台灣' };
+    // 用座標範圍判斷是否在台灣（指定 regionCode 後，Google 的地址會省略國名，不能用地址文字判斷）
+    const la = p.location.latitude, ln = p.location.longitude;
+    if (tw && !(la > 21.5 && la < 26.5 && ln > 118 && ln < 122.5)) return { err: 'Google 找到的地點不在台灣' };
     return { lat: p.location.latitude, lng: p.location.longitude, approx: !addr };
   } catch (e) {
     return { err: 'Google 查詢失敗：' + e.message };
