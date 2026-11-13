@@ -47,6 +47,15 @@ function nameFrom(finalUrl, html) {
   return '';
 }
 
+// 「104臺北市中山區新生里錦州街123號曾家豆漿」→ 地址 + 店名
+function splitName(n) {
+  const s = n.replace(/^\d{3,6}\s*/, '').trim();
+  const m = s.match(/^(.{2,40}?\d+(?:之\d+)?號)\s*(.*)$/);
+  if (m) return { addr: m[1], name: m[2].trim() || m[1] };
+  if (/[路街巷]/.test(s) && /\d/.test(s)) return { addr: s, name: n };
+  return { addr: '', name: n };
+}
+
 // 名稱明顯是台灣地址或地名（排除東京台東區這類日本地名）
 function nameSaysTW(n) {
   return /[臺台][北中南東]|新北|桃園|新竹|基隆|宜蘭|苗栗|彰化|南投|雲林|嘉義|高雄|屏東|花蓮|澎湖|金門|連江/.test(n) &&
@@ -76,12 +85,14 @@ async function area(lat, lng) {
   return { city: clean(city) || '未分類', district: clean(district) || '未分類', country: clean(a.country || '') };
 }
 
-// 用地址或名稱查座標（Google 網頁抓不到座標時的備案）
-async function geocodeName(name, cc) {
-  const n1 = name.replace(/^\d{3,6}\s*/, '').replace(/\s*,.*$/, '').trim();
-  const n2 = n1.replace(/[\u4e00-\u9fff]{1,3}[里村]/, '');
-  const tries = n2 !== n1 ? [n1, n2] : [n1];
-  for (const q of tries) {
+// 用地址查座標（Google 網頁抓不到座標時的備案）。找不到門牌時退而求其次用街道，並標示為約略位置
+async function geocodeAddr(addr, cc) {
+  const noLi = addr.replace(/[\u4e00-\u9fff]{1,3}[里村]/, '');
+  const street = noLi.replace(/\d+(?:之\d+)?號.*$/, '').replace(/[,，\s]+$/, '');
+  const tries = [[addr, false]];
+  if (noLi !== addr) tries.push([noLi, false]);
+  if (street && street !== noLi) tries.push([street, true]);
+  for (const [q, approx] of tries) {
     if (!q) continue;
     try {
       const r = await fetch(
@@ -89,7 +100,7 @@ async function geocodeName(name, cc) {
         { headers: NOMI }
       );
       const j = await r.json();
-      if (j && j[0]) return { lat: +j[0].lat, lng: +j[0].lon };
+      if (j && j[0]) return { lat: +j[0].lat, lng: +j[0].lon, approx };
     } catch (e) {}
   }
   return null;
@@ -118,8 +129,10 @@ module.exports = async (req, res) => {
     });
     const finalUrl = r.url;
     const html = await r.text();
-    const name = nameFrom(finalUrl, html);
-    const tw = nameSaysTW(name);
+    const rawName = nameFrom(finalUrl, html);
+    const sp = splitName(rawName);
+    const name = sp.name || rawName;
+    const tw = nameSaysTW(rawName);
 
     const cands = [];
     const fu = fromUrl(finalUrl);
@@ -127,19 +140,21 @@ module.exports = async (req, res) => {
     cands.push(...candidatesFromHtml(html));
     let c = cands.find(x => !suspicious(x)) || null;
     let ar = c ? await area(c.lat, c.lng).catch(() => null) : null;
+    let approx = false;
 
-    // 沒有可靠座標，或名稱是台灣地址但座標卻落在海外：改用名稱查座標
+    // 沒有可靠座標，或名稱是台灣地址但座標卻落在海外：改用地址查座標
     const wrongPlace = c && tw && ar && !/[臺台]灣|taiwan/i.test(ar.country);
-    if (name && (!c || wrongPlace)) {
-      const g = await geocodeName(name, tw ? 'tw' : '');
-      if (g) { c = g; ar = await area(g.lat, g.lng).catch(() => null); }
-      else if (!c || wrongPlace) c = null;
+    if (!c || wrongPlace) {
+      const g = sp.addr ? await geocodeAddr(sp.addr, tw ? 'tw' : '') : null;
+      if (g) { c = g; approx = !!g.approx; ar = await area(g.lat, g.lng).catch(() => null); }
+      else c = null;
     }
-    if (!c) return res.status(422).json({ error: '找不到這個地點的準確座標，請在 Google 地圖 App 按「分享 → 複製連結」再試一次' });
+    // 還是沒有：把名稱和連結交還給網頁，讓使用者在地圖上點選位置
+    if (!c) return res.status(422).json({ error: '找不到這個地點的座標', name: name || '未命名地點', url: finalUrl });
     if (!ar) ar = { city: '未分類', district: '未分類', country: '' };
-    res.status(200).json({ name: name || '未命名地點', lat: c.lat, lng: c.lng, city: ar.city, district: ar.district, country: ar.country || '', url: finalUrl });
+    res.status(200).json({ name: name || '未命名地點', lat: c.lat, lng: c.lng, city: ar.city, district: ar.district, country: ar.country || '', approx, url: finalUrl });
   } catch (e) {
     res.status(500).json({ error: '解析失敗：' + e.message });
   }
 };
-module.exports._t = { fromUrl, candidatesFromHtml, suspicious, nameFrom, nameSaysTW, clean };
+module.exports._t = { fromUrl, candidatesFromHtml, suspicious, nameFrom, nameSaysTW, clean, splitName };
