@@ -9,8 +9,7 @@
 <title>我的地點</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--bg:#fff;--ink:#111;--mut:#8a8a8e;--line:#ececee;--chip:#f2f2f4;--acc:#0f766e;--err:#d93025;--shadow:0 6px 24px rgba(0,0,0,.14);--h:140px}
-@media (prefers-color-scheme:dark){:root{--bg:#1b1b1d;--ink:#f2f2f3;--mut:#8e8e93;--line:#2c2c2f;--chip:#2a2a2d;--acc:#4fd1c0;--err:#ff7b6e;--shadow:0 6px 24px rgba(0,0,0,.55);color-scheme:dark}}
+:root{color-scheme:light;--bg:#fff;--ink:#111;--mut:#8a8a8e;--line:#ececee;--chip:#f2f2f4;--acc:#0f766e;--err:#d93025;--shadow:0 6px 24px rgba(0,0,0,.14);--h:140px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0;overflow:hidden}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,"SF Pro Text","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
@@ -18,7 +17,6 @@ body{background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,"SF Pro 
 .leaflet-bottom{bottom:var(--h);transition:bottom .25s ease}
 .leaflet-container{font:inherit}
 .leaflet-tile-pane{filter:saturate(.75) brightness(1.02)}
-@media (prefers-color-scheme:dark){.leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) grayscale(.6) brightness(.85) contrast(.9)}}
 .leaflet-control-attribution{background:transparent!important;font-size:10px;color:var(--mut)!important}
 .leaflet-control-attribution a{color:var(--mut)!important}
 .top{position:absolute;z-index:1000;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px)}
@@ -189,7 +187,7 @@ var CN={'臺灣':'台灣','台灣':'台灣','taiwan':'台灣','中華民國':'�
  '美國':'美國','美利堅合眾國':'美國','united states':'美國','英國':'英國','united kingdom':'英國','法國':'法國','france':'法國','德國':'德國','germany':'德國','義大利':'義大利','italy':'義大利',
  '西班牙':'西班牙','spain':'西班牙','越南':'越南','vietnam':'越南','馬來西亞':'馬來西亞','malaysia':'馬來西亞','印度尼西亞':'印尼','印尼':'印尼','indonesia':'印尼','菲律賓':'菲律賓','philippines':'菲律賓',
  '澳大利亞':'澳洲','澳洲':'澳洲','australia':'澳洲','加拿大':'加拿大','canada':'加拿大'};
-function normCountry(c){c=String(c||'').trim();return CN[c.toLowerCase()]||c}
+function normCountry(c){c=String(c||'').trim();var ps=c.split(/\s*[;\/／]\s*/).filter(Boolean),zh=ps.filter(function(x){return /[\u4e00-\u9fff]/.test(x)});c=zh.length?zh[zh.length-1]:(ps[0]||'');return CN[c.toLowerCase()]||c}
 function twRank(p){var s=(p.city||'').replace(/臺/g,'台').toLowerCase();for(var i=0;i<TW.length;i++)for(var k=1;k<TW[i].length;k++)if(s.indexOf(TW[i][k])>=0)return TW[i][0];return 999}
 function countryOf(p){
  if(p.country&&String(p.country).trim())return normCountry(p.country);
@@ -413,7 +411,7 @@ function maybeImport(){
 function doImport(l){
  var b=writeBatch(db),col=collection(db,'lists',curList,'places'),n=0;
  l.forEach(function(p){
-  if(places.some(function(x){return Math.abs(x.lat-p.lat)<1e-5&&Math.abs(x.lng-p.lng)<1e-5}))return;
+  if(places.some(function(x){return x.name===p.name&&dist(x,p)<50}))return;
   b.set(doc(col),{name:p.name,note:p.note||'',city:p.city||'未分類',district:p.district||'未分類',lat:p.lat,lng:p.lng,url:p.url||'',country:p.country||'',addedBy:user.email,createdAt:p.id||Date.now()});n++;
  });
  if(!n){say('沒有需要匯入的新地點');return}
@@ -425,9 +423,10 @@ function add(text){
  say('解析中…');
  fetch('/api/resolve?url='+encodeURIComponent(text)).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'解析失敗');return d})})
  .then(function(d){
-  var dup=places.filter(function(p){return Math.abs(p.lat-d.lat)<1e-5&&Math.abs(p.lng-d.lng)<1e-5})[0];
+  var fid=((d.url||'').match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i)||[])[1]||'';
+  var dup=places.filter(function(p){return (fid&&p.fid===fid)||(p.name===d.name&&dist(p,d)<50)})[0];
   if(dup){say('這份清單已經有了：'+dup.name);pick(dup.id);return}
-  return addDoc(collection(db,'lists',curList,'places'),{name:d.name,note:'',city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url,country:d.country||'',addedBy:user.email,createdAt:Date.now()})
+  return addDoc(collection(db,'lists',curList,'places'),{name:d.name,note:'',city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url,fid:fid,country:d.country||'',addedBy:user.email,createdAt:Date.now()})
   .then(function(r){$('#url').value='';focusNext=r.id;say('已加入：'+d.name+'（'+d.city+' '+d.district+'）')});
  }).catch(function(e){say(e.message,true)});
 }
