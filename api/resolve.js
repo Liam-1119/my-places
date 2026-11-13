@@ -1,6 +1,7 @@
-// Vercel Serverless Function：展開 Google Map 連結 → 座標 + 名稱 + 城市/區
+// Vercel Serverless Function：展開 Google Map 連結 → 座標 + 名稱 + 城市/區/國家
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 const HOST = /(^|\.)(google\.[a-z.]+|goo\.gl|g\.co|share\.google)$/i;
+const NOMI = { 'User-Agent': 'my-places-app/1.0 (personal use)' };
 
 function fromUrl(s) {
   let d = s;
@@ -11,14 +12,23 @@ function fromUrl(s) {
   return m ? { lat: +m[1], lng: +m[2] } : null;
 }
 
-function fromHtml(h) {
-  let m = h.match(/APP_INITIALIZATION_STATE=\[\[\[(?:-?[\d.e+]+),(-?\d+\.\d+),(-?\d+\.\d+)/); // 順序：lng, lat
-  if (m) return { lat: +m[2], lng: +m[1] };
-  m = h.match(/center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)/);
-  if (m) return { lat: +m[1], lng: +m[2] };
+// 依可靠程度排序；APP_INITIALIZATION_STATE 是畫面預設位置，最不可靠，放最後
+function candidatesFromHtml(h) {
+  const out = [];
+  let m = h.match(/center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)/);
+  if (m) out.push({ lat: +m[1], lng: +m[2] });
+  m = h.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (m) out.push({ lat: +m[1], lng: +m[2] });
   m = h.match(/\[null,null,(-?\d+\.\d+),(-?\d+\.\d+)\]/);
-  if (m) return { lat: +m[1], lng: +m[2] };
-  return null;
+  if (m) out.push({ lat: +m[1], lng: +m[2] });
+  m = h.match(/APP_INITIALIZATION_STATE=\[\[\[(?:-?[\d.e+]+),(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) out.push({ lat: +m[2], lng: +m[1] });
+  return out;
+}
+
+// Vercel 伺服器在美國維吉尼亞州 Ashburn。Google 抓不到地點時，會回傳以伺服器位置為中心的預設畫面，要排除。
+function suspicious(c) {
+  return c.lat > 38.84 && c.lat < 39.24 && c.lng > -77.69 && c.lng < -77.29;
 }
 
 function unent(s) {
@@ -37,20 +47,52 @@ function nameFrom(finalUrl, html) {
   return '';
 }
 
+// 名稱明顯是台灣地址或地名（排除東京台東區這類日本地名）
+function nameSaysTW(n) {
+  return /[臺台][北中南東]|新北|桃園|新竹|基隆|宜蘭|苗栗|彰化|南投|雲林|嘉義|高雄|屏東|花蓮|澎湖|金門|連江/.test(n) &&
+         !/東京|大阪|京都|日本|福岡|沖繩/.test(n);
+}
+
+// OSM 的名稱常是「簡體;繁體」或「甲 / 乙」多個寫法，只留一個中文寫法
+function clean(s) {
+  if (!s) return '';
+  const parts = String(s).split(/\s*[;\/／]\s*/).map(x => x.trim()).filter(Boolean);
+  const zh = parts.filter(x => /[\u4e00-\u9fff]/.test(x));
+  return zh.length ? zh[zh.length - 1] : (parts[0] || '');
+}
+
 async function area(lat, lng) {
   const r = await fetch(
     `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=12&addressdetails=1&accept-language=zh-TW,en&lat=${lat}&lon=${lng}`,
-    { headers: { 'User-Agent': 'my-places-app/1.0 (personal use)' } }
+    { headers: NOMI }
   );
   const a = (await r.json()).address || {};
   let city = a.city || a.state || a.county || a.province || '';
   const ward = Object.values(a).find(v => typeof v === 'string' && /[區区]$/.test(v));
   let district = ward || a.suburb || a.city_district || a.district || a.borough || a.town || a.village || a.neighbourhood || '';
-  // 日本：city 其實是「區」(港区)，上一層才是都道府縣
   if (a.state && a.city && /[区區]$/.test(a.city) && a.state !== a.city) { district = a.city; city = a.state; }
   if (!district && a.county && a.county !== city) district = a.county;
   if (district === city) district = '';
-  return { city: city || '未分類', district: district || '未分類', country: a.country || '' };
+  return { city: clean(city) || '未分類', district: clean(district) || '未分類', country: clean(a.country || '') };
+}
+
+// 用地址或名稱查座標（Google 網頁抓不到座標時的備案）
+async function geocodeName(name, cc) {
+  const n1 = name.replace(/^\d{3,6}\s*/, '').replace(/\s*,.*$/, '').trim();
+  const n2 = n1.replace(/[\u4e00-\u9fff]{1,3}[里村]/, '');
+  const tries = n2 !== n1 ? [n1, n2] : [n1];
+  for (const q of tries) {
+    if (!q) continue;
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=zh-TW,en&q=${encodeURIComponent(q)}${cc ? '&countrycodes=' + cc : ''}`,
+        { headers: NOMI }
+      );
+      const j = await r.json();
+      if (j && j[0]) return { lat: +j[0].lat, lng: +j[0].lon };
+    } catch (e) {}
+  }
+  return null;
 }
 
 module.exports = async (req, res) => {
@@ -76,12 +118,28 @@ module.exports = async (req, res) => {
     });
     const finalUrl = r.url;
     const html = await r.text();
-    const c = fromUrl(finalUrl) || fromHtml(html);
-    if (!c) return res.status(422).json({ error: '這個連結解析不出座標，請換用「分享」→「複製連結」再試一次' });
-    const [name, ar] = await Promise.all([Promise.resolve(nameFrom(finalUrl, html)), area(c.lat, c.lng).catch(() => ({ city: '未分類', district: '未分類', country: '' }))]);
+    const name = nameFrom(finalUrl, html);
+    const tw = nameSaysTW(name);
+
+    const cands = [];
+    const fu = fromUrl(finalUrl);
+    if (fu) cands.push(fu);
+    cands.push(...candidatesFromHtml(html));
+    let c = cands.find(x => !suspicious(x)) || null;
+    let ar = c ? await area(c.lat, c.lng).catch(() => null) : null;
+
+    // 沒有可靠座標，或名稱是台灣地址但座標卻落在海外：改用名稱查座標
+    const wrongPlace = c && tw && ar && !/[臺台]灣|taiwan/i.test(ar.country);
+    if (name && (!c || wrongPlace)) {
+      const g = await geocodeName(name, tw ? 'tw' : '');
+      if (g) { c = g; ar = await area(g.lat, g.lng).catch(() => null); }
+      else if (!c || wrongPlace) c = null;
+    }
+    if (!c) return res.status(422).json({ error: '找不到這個地點的準確座標，請在 Google 地圖 App 按「分享 → 複製連結」再試一次' });
+    if (!ar) ar = { city: '未分類', district: '未分類', country: '' };
     res.status(200).json({ name: name || '未命名地點', lat: c.lat, lng: c.lng, city: ar.city, district: ar.district, country: ar.country || '', url: finalUrl });
   } catch (e) {
     res.status(500).json({ error: '解析失敗：' + e.message });
   }
 };
-module.exports._t = { fromUrl, fromHtml, nameFrom };
+module.exports._t = { fromUrl, candidatesFromHtml, suspicious, nameFrom, nameSaysTW, clean };
