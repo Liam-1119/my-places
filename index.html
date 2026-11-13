@@ -92,6 +92,14 @@ h2 small{color:var(--mut);font-weight:400;font-size:13px;margin-left:6px}
 .modal label.ck{display:flex;align-items:center;gap:10px;margin:0;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px;color:var(--ink)}
 .modal .ck input{display:inline-block;width:18px;height:18px;margin:0;padding:0;flex:none;border:0}
 .ck .mut{margin-left:auto}
+.cross{position:fixed;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;z-index:1200;pointer-events:none;display:none}
+.cross.show{display:block}
+.cross:before,.cross:after{content:"";position:absolute;background:#e5484d;border-radius:1px}
+.cross:before{left:16px;top:0;width:2px;height:34px}
+.cross:after{top:16px;left:0;height:2px;width:34px}
+.pinbar{position:fixed;z-index:1500;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);background:var(--bg);border-radius:16px;box-shadow:var(--shadow);padding:12px 14px;display:none}
+.pinbar.show{display:block}
+.pinbar .acts{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -101,6 +109,8 @@ h2 small{color:var(--mut);font-weight:400;font-size:13px;margin-left:6px}
   <button class="chip" id="chip" data-a="openList">清單</button><div id="say"></div>
   <div class="clip" id="clip"><div>剪貼簿裡有 Google Map 連結，要加入嗎？</div><div class="u" id="clipUrl"></div><div class="acts"><button class="pbtn ghost" id="clipNo">略過</button><button class="pbtn" id="clipYes">加入</button></div></div>
 </div>
+<div class="cross" id="cross"></div>
+<div class="pinbar" id="pinbar"><div id="pinName"></div><div class="acts"><button class="pbtn ghost" id="pinCancel">取消</button><button class="pbtn ghost" id="pinMe">用目前位置</button><button class="pbtn" id="pinOk">確認位置</button></div></div>
 <div class="sheet" id="sheet">
   <button class="fab" id="loc" aria-label="我的位置">◎</button>
   <div class="grab" id="grab"><i></i></div>
@@ -421,15 +431,39 @@ function add(text){
  text=(text||'').trim();if(!text)return;
  if(!curList){pending=text;say('準備中…');return}
  say('解析中…');
- fetch('/api/resolve?url='+encodeURIComponent(text)).then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'解析失敗');return d})})
+ fetch('/api/resolve?url='+encodeURIComponent(text)).then(function(r){return r.json().then(function(d){if(!r.ok){var er=new Error(d.error||'解析失敗');er.d=d;throw er}return d})})
  .then(function(d){
   var fid=((d.url||'').match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i)||[])[1]||'';
   var dup=places.filter(function(p){return (fid&&p.fid===fid)||(p.name===d.name&&dist(p,d)<50)})[0];
   if(dup){say('這份清單已經有了：'+dup.name);pick(dup.id);return}
   return addDoc(collection(db,'lists',curList,'places'),{name:d.name,note:'',city:d.city,district:d.district,lat:d.lat,lng:d.lng,url:d.url,fid:fid,country:d.country||'',addedBy:user.email,createdAt:Date.now()})
-  .then(function(r){$('#url').value='';focusNext=r.id;say('已加入：'+d.name+'（'+d.city+' '+d.district+'）')});
- }).catch(function(e){say(e.message,true)});
+  .then(function(r){$('#url').value='';focusNext=r.id;say('已加入：'+d.name+'（'+d.city+' '+d.district+'）'+(d.approx?'，座標是地址附近的約略位置':''))});
+ }).catch(function(e){if(e.d&&e.d.name&&e.d.url)startPin(e.d);else say(e.message,true)});
 }
+
+/* 自動找不到座標時：在地圖上點選位置 */
+var pinInfo=null;
+function startPin(d){
+ pinInfo=d;snap(0);
+ $('#pinName').textContent='找不到「'+d.name+'」的座標。請移動地圖，讓紅色十字對準它的位置，再按確認。';
+ $('#pinbar').classList.add('show');$('#cross').classList.add('show');
+ if(me&&!fitted)map.setView([me.lat,me.lng],16,{animate:false});
+ say('');
+}
+function endPin(){pinInfo=null;$('#pinbar').classList.remove('show');$('#cross').classList.remove('show')}
+$('#pinCancel').onclick=endPin;
+$('#pinMe').onclick=function(){if(me)map.setView([me.lat,me.lng],17,{animate:false});else say('還沒有定位到你的位置',true)};
+$('#pinOk').onclick=function(){
+ var d=pinInfo,c=map.getCenter();if(!d||!curList)return;
+ endPin();say('取得地區資料…');
+ var fid=((d.url||'').match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i)||[])[1]||'';
+ var dup=places.filter(function(p){return fid&&p.fid===fid})[0];
+ if(dup){say('這份清單已經有了：'+dup.name);pick(dup.id);return}
+ fetch('/api/resolve?lat='+c.lat+'&lng='+c.lng).then(function(r){return r.json()}).catch(function(){return{}}).then(function(a){
+  return addDoc(collection(db,'lists',curList,'places'),{name:d.name,note:'',city:a.city||'未分類',district:a.district||'未分類',lat:c.lat,lng:c.lng,url:d.url,fid:fid,country:a.country||'',addedBy:user.email,createdAt:Date.now()});
+ }).then(function(r){$('#url').value='';focusNext=r.id;say('已加入：'+d.name)}).catch(function(e){say('儲存失敗：'+e.message,true)});
+};
+
 $('#go').onclick=function(){
  var v=$('#url').value;
  if(v.trim())return add(v);
